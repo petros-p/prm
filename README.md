@@ -117,7 +117,7 @@ When logging an interaction, you'll be prompted to select:
 | `stats` | Show network statistics |
 | `save` | Manually save (auto-saves after changes) |
 | `help` | Show help |
-| `quit` | Exit the program |
+| `exit` | Exit the program |
 
 ### Examples
 

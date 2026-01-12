@@ -68,7 +68,7 @@ class REPL(dataFile: Path) {
 
   def run(): Unit = {
     println("Personal Relationship Manager")
-    println("Type 'help' for commands, 'quit' to exit.")
+    println("Type 'help' for commands, 'exit' to exit.")
     println()
 
     loadOrInit()
