@@ -220,7 +220,7 @@ COMMANDS:
     stats                   Show network statistics
     save                    Manually save (auto-saves after changes)
     help                    Show this help
-    quit                    Exit the program
+    exit or quit            Exit the program
 
 TIPS:
   - Names are matched case-insensitively
@@ -907,7 +907,7 @@ TIPS:
     println(s"Relationship labels (${labels.size}):")
     for (label <- labels) {
       val count = NetworkQueries.peopleWithLabel(network, label.id).size
-      println(s"  ${label.name} ($count people)")
+      println(s"  ${label.name} $count")
     }
   }
 
