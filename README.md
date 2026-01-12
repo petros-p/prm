@@ -22,12 +22,13 @@ If you don't have sbt, install it via:
 
 ```bash
 # macOS
-brew install sbt
+See https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Mac.html
 
 # Linux
-curl -fL https://github.com/coursier/coursier/releases/latest/download/cs-x86_64-pc-linux.gz | gzip -d > cs
-chmod +x cs
-./cs setup
+See https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Linux.html
+
+# Windows
+See https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Windows.html
 ```
 
 ### Running
