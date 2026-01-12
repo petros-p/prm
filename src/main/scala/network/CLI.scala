@@ -223,7 +223,6 @@ COMMANDS:
     quit                    Exit the program
 
 TIPS:
-  - Use quotes for names with spaces: add "Mary Jane"
   - Names are matched case-insensitively
   - Partial name matches work for most commands
 """.trim)
