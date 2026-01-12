@@ -44,10 +44,10 @@ REPL COMMANDS:
   Once running, type 'help' to see available commands.
 
 GETTING STARTED:
-  1. Run the program: sbt run
+  1. Run the program: sbt run (or ./relationships if using native executable)
   2. On first run, you'll be prompted to create your network
-  3. Use 'add <n>' to add people
-  4. Use 'log <n>' to log interactions
+  3. Use 'add <name>' to add people
+  4. Use 'log <name>' to log interactions
   5. Use 'remind' to see who you should reach out to
 
 DATA STORAGE:
@@ -141,7 +141,6 @@ class REPL(dataFile: Path) {
       case "set-reminder" => setReminder(args)
       case "search" | "find" => searchPeople(args)
       case "edit" => editPerson(args)
-      case "edit-labels" => editLabels(args)
       case "archive" => archivePerson(args)
       case "unarchive" => unarchivePerson(args)
       case "archived" => listArchived()
@@ -190,8 +189,7 @@ COMMANDS:
     list                    List all active people in your network
     add <name>              Add a new person
     show <name>             Show details about a person
-    edit <name>             Edit a person's information
-    edit-labels <name>      Add/remove labels for a person
+    edit <name>             Edit a person's information and labels
     search <query>          Search for people by name
     archive <name>          Archive a person (hide from main list)
     unarchive <name>        Restore an archived person
@@ -211,7 +209,7 @@ COMMANDS:
     circles                 List all active circles
     add-circle <name>       Create a new circle
     show-circle <name>      Show circle details and members
-    edit-circle <name>      Edit circle name, members
+    edit-circle <name>      Edit circle name and members
     archive-circle <name>   Archive a circle
     unarchive-circle <name> Restore an archived circle
     archived-circles        List archived circles
@@ -225,6 +223,7 @@ COMMANDS:
 TIPS:
   - Names are matched case-insensitively
   - Partial name matches work for most commands
+  - Use quotes for names with spaces: add "Mary Jane"
 """.trim)
   }
 
@@ -556,6 +555,7 @@ TIPS:
         println(s"Editing ${person.name} (press Enter to keep current value)")
         println()
 
+        // Basic fields
         print(s"Name [${person.name}]: ")
         val nameInput = StdIn.readLine().trim
         val newName = if (nameInput.isEmpty) None else Some(nameInput)
@@ -587,27 +587,19 @@ TIPS:
           case Right(n) =>
             network = n
             save()
-            println(s"Updated ${newName.getOrElse(person.name)}")
           case Left(e) =>
             println(s"Error: ${e.message}")
+            return
         }
 
-      case None =>
-        if (args.isEmpty) println("Usage: edit <name>")
-    }
-  }
-
-  private def editLabels(args: List[String]): Unit = {
-    findPerson(args) match {
-      case Some(person) =>
+        // Labels section
+        println()
         val currentLabels = NetworkQueries.labelsFor(network, person.id)
         val allLabels = network.relationshipLabels.values.toList.sortBy(_.name)
         
-        println(s"Editing labels for ${person.name}")
+        println("Labels (enter numbers to toggle, press Enter when done):")
+        println(s"Current: ${if (currentLabels.isEmpty) "(none)" else currentLabels.map(_.name).toList.sorted.mkString(", ")}")
         println()
-        println("Current labels: " + (if (currentLabels.isEmpty) "(none)" else currentLabels.map(_.name).toList.sorted.mkString(", ")))
-        println()
-        println("Available labels (enter numbers to toggle, press Enter when done):")
         
         var selectedIds = currentLabels.map(_.id)
         var editing = true
@@ -639,14 +631,16 @@ TIPS:
           case Right(n) =>
             network = n
             save()
-            val newLabels = selectedIds.flatMap(network.relationshipLabels.get).map(_.name).toList.sorted
-            println(s"Labels updated: ${if (newLabels.isEmpty) "(none)" else newLabels.mkString(", ")}")
+            val finalLabels = selectedIds.flatMap(network.relationshipLabels.get).map(_.name).toList.sorted
+            println()
+            println(s"Updated ${newName.getOrElse(person.name)}")
+            println(s"Labels: ${if (finalLabels.isEmpty) "(none)" else finalLabels.mkString(", ")}")
           case Left(e) =>
             println(s"Error: ${e.message}")
         }
 
       case None =>
-        if (args.isEmpty) println("Usage: edit-labels <name>")
+        if (args.isEmpty) println("Usage: edit <name>")
     }
   }
 
@@ -907,7 +901,7 @@ TIPS:
     println(s"Relationship labels (${labels.size}):")
     for (label <- labels) {
       val count = NetworkQueries.peopleWithLabel(network, label.id).size
-      println(s"  ${label.name} $count")
+      println(s"  ${label.name} ($count)")
     }
   }
 

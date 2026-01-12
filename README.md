@@ -11,25 +11,43 @@ A command-line tool for tracking your relationships. Keep notes on people you kn
 - **Search** your network by name, nickname, or a part of a name
 - **Archive** people and circles you're no longer actively keeping track of (without losing their data)
 
-## Installation
+## Quick Start (Pre-built Executable)
+
+If someone shared a pre-built executable with you:
+
+```bash
+# Make it executable (macOS/Linux)
+chmod +x relationships
+
+# Run it
+./relationships
+```
+
+On Windows, just double-click `relationships.exe` or run it from Command Prompt.
+
+Your data is stored at `~/.relationships/network.json` (or `%USERPROFILE%\.relationships\network.json` on Windows).
+
+---
+
+## Building from Source
 
 ### Prerequisites
 
-- Java 17
-- sbt 1.12.0 (Scala Build Tool)
+- Java 17 or higher
+- sbt 1.10+ (Scala Build Tool)
 
-If you don't have sbt, install it via:
+#### Installing sbt
 
-#### macOS
-See [Installing sbt on Mac](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Mac.html)
+**macOS:**
+```bash
+brew install sbt
+```
 
-#### Linux
-See [Installing sbt on Linux](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Linux.html)
+**Linux:** See [Installing sbt on Linux](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Linux.html)
 
-#### Windows
-See [Installing sbt on Windows](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Windows.html)
+**Windows:** See [Installing sbt on Windows](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Windows.html)
 
-### Running
+### Running with sbt
 
 ```bash
 cd relationships
@@ -42,6 +60,87 @@ Or with `--help`:
 sbt "run --help"
 ```
 
+### Running Tests
+
+```bash
+sbt test
+```
+
+---
+
+## Building a Native Executable
+
+You can compile the application to a standalone native executable that doesn't require Java to run. This is useful for sharing with others.
+
+### Prerequisites for Native Image
+
+You need GraalVM with native-image installed:
+
+**macOS (using SDKMAN - recommended):**
+```bash
+# Install SDKMAN if you don't have it
+curl -s "https://get.sdkman.io" | bash
+source "$HOME/.sdkman/bin/sdkman-init.sh"
+
+# Install GraalVM
+sdk install java 21.0.2-graal
+
+# Verify native-image is available
+native-image --version
+```
+
+**macOS (using Homebrew):**
+```bash
+brew install --cask graalvm-jdk
+# Add to PATH and install native-image
+export GRAALVM_HOME=/Library/Java/JavaVirtualMachines/graalvm-jdk-21/Contents/Home
+export PATH=$GRAALVM_HOME/bin:$PATH
+```
+
+**Linux:**
+```bash
+# Using SDKMAN (recommended)
+sdk install java 21.0.2-graal
+
+# Or download from https://www.graalvm.org/downloads/
+```
+
+**Windows:**
+1. Download GraalVM from https://www.graalvm.org/downloads/
+2. Extract and add to PATH
+3. Install Visual Studio Build Tools (required for native-image on Windows)
+
+### Building the Executable
+
+```bash
+cd relationships
+sbt nativeImage
+```
+
+This will create a native executable at:
+- `target/native-image/relationships` (macOS/Linux)
+- `target/native-image/relationships.exe` (Windows)
+
+The build takes a few minutes. The resulting executable:
+- Is a single file (~15-30 MB)
+- Requires no Java installation to run
+- Starts instantly (no JVM warmup)
+
+### Sharing the Executable
+
+The native executable is self-contained. To share:
+
+1. Build on each target platform (macOS executable won't run on Windows, etc.)
+2. Share the single executable file
+3. Recipients just need to make it executable (`chmod +x`) and run it
+
+**Cross-platform note:** Native executables are platform-specific. You need to build on each OS you want to support:
+- Build on macOS → works on macOS
+- Build on Linux → works on Linux  
+- Build on Windows → works on Windows
+
+---
+
 ## Usage
 
 ### First Run
@@ -50,12 +149,12 @@ On first run, you'll be prompted to enter your name. This creates your network f
 
 ```
 Personal Relationship Manager
-Type 'help' for commands, 'exit' or 'quit' to exit.
+Type 'help' for commands, 'exit' to exit.
 
 No existing network found.
 
-What's your name? Testy Testadopoulos
-Welcome, Testy! Your network has been created.
+What's your name? Petros
+Welcome, Petros! Your network has been created.
 
 >
 ```
@@ -67,22 +166,21 @@ Welcome, Testy! Your network has been created.
 | Command | Description |
 |---------|-------------|
 | `list` | List all active people in your network |
-| `add <n>` | Add a new person |
-| `show <n>` | Show details about a person |
-| `edit <n>` | Edit a person's information |
-| `edit-labels <n>` | Add/remove labels for a person |
+| `add <name>` | Add a new person |
+| `show <name>` | Show details about a person |
+| `edit <name>` | Edit a person's information and labels |
 | `search <query>` | Search for people by name |
-| `archive <n>` | Archive a person (hide from main list) |
-| `unarchive <n>` | Restore an archived person |
+| `archive <name>` | Archive a person (hide from main list) |
+| `unarchive <name>` | Restore an archived person |
 | `archived` | List archived people |
 
 #### Interactions
 
 | Command | Description |
 |---------|-------------|
-| `log <n>` | Log an interaction with someone |
+| `log <name>` | Log an interaction with someone |
 | `remind` | Show people you're overdue to contact |
-| `set-reminder <n>` | Set reminder frequency for someone |
+| `set-reminder <name>` | Set reminder frequency for someone |
 
 When logging an interaction, you'll be prompted to select:
 1. **Medium**: In Person, Text, Phone Call, Video Call, or Social Media
@@ -94,8 +192,8 @@ When logging an interaction, you'll be prompted to select:
 
 | Command | Description |
 |---------|-------------|
-| `add-phone <n>` | Add a phone number to someone |
-| `add-email <n>` | Add an email address to someone |
+| `add-phone <name>` | Add a phone number to someone |
+| `add-email <name>` | Add an email address to someone |
 
 #### Organization
 
@@ -103,11 +201,11 @@ When logging an interaction, you'll be prompted to select:
 |---------|-------------|
 | `labels` | List all relationship labels |
 | `circles` | List all active circles |
-| `add-circle <n>` | Create a new circle (with option to add members) |
-| `show-circle <n>` | Show circle details and members |
-| `edit-circle <n>` | Edit circle name and members |
-| `archive-circle <n>` | Archive a circle |
-| `unarchive-circle <n>` | Restore an archived circle |
+| `add-circle <name>` | Create a new circle (with option to add members) |
+| `show-circle <name>` | Show circle details and members |
+| `edit-circle <name>` | Edit circle name and members |
+| `archive-circle <name>` | Archive a circle |
+| `unarchive-circle <name>` | Restore an archived circle |
 | `archived-circles` | List archived circles |
 
 #### Other
@@ -119,7 +217,7 @@ When logging an interaction, you'll be prompted to select:
 | `help` | Show help |
 | `exit` | Exit the program |
 
-### Examples
+### Example Session
 
 ```
 > add Alice
@@ -144,25 +242,23 @@ How did you interact?
   4. Video Call
   5. Social Media
 Medium (1-5): 1
-Location [Coffee shop]: 
+Location: Coffee shop
 Topics (comma-separated): farming, weather
 Note (optional): Great chat about her greenhouse
 Logged interaction with Alice
 
-> add-circle "Farm Friends"
-Circle name: Farm Friends
-Add members (enter numbers separated by spaces, or press Enter to skip):
-  1. Alice
-  2. Bob
-Members: 1 2
-Created circle: Farm Friends with 2 members
+> edit Alice
+Editing Alice (press Enter to keep current value)
 
-> edit-labels Alice
-Editing labels for Alice
+Name [Alice]: 
+Nickname []: Ali
+How we met [Farmers market]: 
+Notes []: Interested in permaculture
+Default location []: Coffee shop
 
-Current labels: friend
+Labels (enter numbers to toggle, press Enter when done):
+Current: friend
 
-Available labels (enter numbers to toggle, press Enter when done):
   1. [ ] acquaintance
   2. [ ] coworker
   3. [ ] family
@@ -175,24 +271,12 @@ Toggle (or Enter to finish): 3
   4. [x] friend
   ...
 Toggle (or Enter to finish): 
-Labels updated: family, friend
+
+Updated Alice
+Labels: family, friend
 
 > remind
-People to reach out to (1):
-
-  Bob - 15 days overdue (last contact 6 week(s) ago)
-
-> show Alice
-Name: Alice
-How we met: Farmers market
-Labels: family, friend
-Circles: Farm Friends
-Reminder: every 14 days
-Last interaction: today via In Person
-  My location: Coffee shop
-  Topics: farming, weather
-  Note: Great chat about her greenhouse
-Total interactions: 1
+No overdue reminders! You're all caught up.
 ```
 
 ### Tips
@@ -209,7 +293,7 @@ Your network is stored in JSON format at `~/.relationships/network.json`.
 To use a different file:
 
 ```bash
-sbt "run --file /path/to/mynetwork.json"
+./relationships --file /path/to/mynetwork.json
 ```
 
 ### Backup
@@ -225,6 +309,9 @@ cp ~/.relationships/network.json ~/backups/
 ```
 relationships/
 ├── build.sbt                 # Build configuration
+├── project/
+│   ├── build.properties      # sbt version
+│   └── plugins.sbt           # sbt plugins (native-image)
 ├── README.md                 # This file
 └── src/
     ├── main/scala/network/
@@ -241,15 +328,7 @@ relationships/
         └── JsonCodecsSpec.scala
 ```
 
-## Development
-
-### Running Tests
-
-```bash
-sbt test
-```
-
-### Architecture
+## Architecture
 
 The codebase follows functional programming principles:
 
