@@ -50,7 +50,7 @@ On first run, you'll be prompted to enter your name. This creates your network f
 
 ```
 Personal Relationship Manager
-Type 'help' for commands, 'quit' to exit.
+Type 'help' for commands, 'exit' or 'quit' to exit.
 
 No existing network found.
 
