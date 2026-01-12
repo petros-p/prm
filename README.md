@@ -22,13 +22,13 @@ If you don't have sbt, install it via:
 
 ```bash
 # macOS
-See https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Mac.html
+See [Installing sbt on Mac][https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Mac.html]
 
 # Linux
-See https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Linux.html
+See [Installing sbt on Linux][https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Linux.html]
 
 # Windows
-See https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Windows.html
+See [Installing sbt on Windows][https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Windows.html]
 ```
 
 ### Running
