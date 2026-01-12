@@ -20,16 +20,14 @@ A command-line tool for tracking your relationships. Keep notes on people you kn
 
 If you don't have sbt, install it via:
 
-```bash
-# macOS
-See [Installing sbt on Mac][https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Mac.html]
+#### macOS
+See [Installing sbt on Mac](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Mac.html)
 
-# Linux
-See [Installing sbt on Linux][https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Linux.html]
+#### Linux
+See [Installing sbt on Linux](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Linux.html)
 
-# Windows
-See [Installing sbt on Windows][https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Windows.html]
-```
+#### Windows
+See [Installing sbt on Windows](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Windows.html)
 
 ### Running
 
