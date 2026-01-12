@@ -15,8 +15,8 @@ A command-line tool for tracking your relationships. Keep notes on people you kn
 
 ### Prerequisites
 
-- Java 11 or higher
-- sbt (Scala Build Tool)
+- Java 17
+- sbt 1.12.0 (Scala Build Tool)
 
 If you don't have sbt, install it via:
 
