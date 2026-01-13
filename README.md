@@ -1,6 +1,7 @@
 # Personal Relationship Manager
 
 A command-line tool for tracking your relationships. Keep notes on people you know, log interactions, and get reminders to stay in touch.
+Currently a prototype.
 
 ## Features
 
