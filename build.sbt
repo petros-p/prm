@@ -1,8 +1,7 @@
-val scala3Version = "3.7.0"
+val scala3Version = "3.7.4"
 
 lazy val root = project
   .in(file("."))
-  .enablePlugins(NativeImagePlugin)
   .settings(
     name := "relationships",
     version := "0.1.0",
@@ -16,13 +15,11 @@ lazy val root = project
     // Main class for running
     Compile / mainClass := Some("network.CLI"),
     
-    // Native image settings
-    nativeImageOptions ++= Seq(
-      "--no-fallback",
-      "--initialize-at-build-time",
-      "-H:+ReportExceptionStackTraces"
-    ),
-    // Use graalvm-community edition which is available via Coursier
-    nativeImageJvm := "graalvm-community",
-    nativeImageVersion := "21.0.2"
+    // Assembly settings (for fat JAR)
+    assembly / assemblyJarName := "relationships.jar",
+    assembly / mainClass := Some("network.CLI"),
+    assembly / assemblyMergeStrategy := {
+      case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+      case x => MergeStrategy.first
+    }
   )
