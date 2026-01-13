@@ -42,11 +42,11 @@ object NetworkQueries {
   // --------------------------------------------------------------------------
 
   /**
-   * Gets all active (non-archived) people, excluding self.
+   * Gets all active (non-archived) people, including self.
    */
   def activePeople(network: Network): List[Person] =
     network.people.values
-      .filter(p => !p.archived && !p.isSelf)
+      .filter(p => !p.archived)
       .toList
       .sortBy(_.name)
 
@@ -413,7 +413,7 @@ object NetworkQueries {
   )
 
   def stats(network: Network): NetworkStats = {
-    val people = network.people.values.filter(!_.isSelf)
+    val people = network.people.values
     val circles = network.circles.values
     NetworkStats(
       totalPeople = people.size,

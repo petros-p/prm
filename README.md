@@ -1,29 +1,26 @@
 # Personal Relationship Manager
 
-A command-line tool for tracking your relationships. Keep notes on people you know, log interactions, and get reminders to stay in touch.
+A command-line tool for tracking your relationships, including with yourself. Keep notes on people you know, log interactions, and get reminders to stay in touch.
 
 ## Features
 
-- **Track people** in your network with notes, labels, and contact info
+- **Track people** in your network with notes, labels, and contact info (including yourself)
 - **Log interactions** with medium (In Person, Text, Phone Call, Video Call, Social Media) and locations
-- **Set reminders** to reach out to people on a regular cadence
+- **Set reminders** to reach out to people on a regular cadence (including self-check-in reminders)
 - **Organize** people into circles
 - **Search** your network by name, nickname, or a part of a name
 - **Archive** people and circles you're no longer actively keeping track of (without losing their data)
 
-## Quick Start (Pre-built Executable)
-
-If someone shared a pre-built executable with you:
+## Quick Start
 
 ```bash
-# Make it executable (macOS/Linux)
-chmod +x relationships
+# Run with sbt
+sbt run
 
-# Run it
-./relationships
+# Or build a JAR and run it
+sbt assembly
+java -jar target/scala-3.7.4/relationships.jar
 ```
-
-On Windows, just double-click `relationships.exe` or run it from Command Prompt.
 
 Your data is stored at `~/.relationships/network.json` (or `%USERPROFILE%\.relationships\network.json` on Windows).
 
@@ -66,78 +63,19 @@ sbt "run --help"
 sbt test
 ```
 
----
+### Building a JAR
 
-## Building a Native Executable
-
-You can compile the application to a standalone native executable that doesn't require Java to run. This is useful for sharing with others.
-
-### Prerequisites for Native Image
-
-You need GraalVM with native-image installed:
-
-**macOS (using SDKMAN - recommended):**
-```bash
-# Install SDKMAN if you don't have it
-curl -s "https://get.sdkman.io" | bash
-source "$HOME/.sdkman/bin/sdkman-init.sh"
-
-# Install GraalVM
-sdk install java 21.0.2-graal
-
-# Verify native-image is available
-native-image --version
-```
-
-**macOS (using Homebrew):**
-```bash
-brew install --cask graalvm-jdk
-# Add to PATH and install native-image
-export GRAALVM_HOME=/Library/Java/JavaVirtualMachines/graalvm-jdk-21/Contents/Home
-export PATH=$GRAALVM_HOME/bin:$PATH
-```
-
-**Linux:**
-```bash
-# Using SDKMAN (recommended)
-sdk install java 21.0.2-graal
-
-# Or download from https://www.graalvm.org/downloads/
-```
-
-**Windows:**
-1. Download GraalVM from https://www.graalvm.org/downloads/
-2. Extract and add to PATH
-3. Install Visual Studio Build Tools (required for native-image on Windows)
-
-### Building the Executable
+To build a standalone JAR file:
 
 ```bash
-cd relationships
-sbt nativeImage
+sbt assembly
 ```
 
-This will create a native executable at:
-- `target/native-image/relationships` (macOS/Linux)
-- `target/native-image/relationships.exe` (Windows)
+This creates `target/scala-3.7.4/relationships.jar` which you can run with:
 
-The build takes a few minutes. The resulting executable:
-- Is a single file (~15-30 MB)
-- Requires no Java installation to run
-- Starts instantly (no JVM warmup)
-
-### Sharing the Executable
-
-The native executable is self-contained. To share:
-
-1. Build on each target platform (macOS executable won't run on Windows, etc.)
-2. Share the single executable file
-3. Recipients just need to make it executable (`chmod +x`) and run it
-
-**Cross-platform note:** Native executables are platform-specific. You need to build on each OS you want to support:
-- Build on macOS → works on macOS
-- Build on Linux → works on Linux  
-- Build on Windows → works on Windows
+```bash
+java -jar relationships.jar
+```
 
 ---
 

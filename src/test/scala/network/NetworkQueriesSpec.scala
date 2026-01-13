@@ -36,11 +36,10 @@ class NetworkQueriesSpec extends AnyFunSuite with Matchers {
     network
   }
 
-  test("activePeople returns non-archived, non-self people") {
+  test("activePeople returns non-archived people including self") {
     val network = createPopulatedNetwork()
     val active = NetworkQueries.activePeople(network)
-    active.map(_.name) should contain allOf ("Alice", "Bob", "Carol")
-    active.map(_.name) should not contain "Petros"
+    active.map(_.name) should contain allOf ("Alice", "Bob", "Carol", "Petros")
   }
 
   test("activeCircles returns non-archived circles") {
@@ -95,8 +94,8 @@ class NetworkQueriesSpec extends AnyFunSuite with Matchers {
     
     val s = NetworkQueries.stats(n3)
     
-    s.totalPeople shouldBe 3
-    s.activePeople shouldBe 3
+    s.totalPeople shouldBe 4  // Alice, Bob, Carol, Petros (self)
+    s.activePeople shouldBe 4
     s.totalCircles shouldBe 2
     s.activeCircles shouldBe 1
     s.archivedCircles shouldBe 1
