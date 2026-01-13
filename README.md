@@ -11,37 +11,17 @@ A command-line tool for tracking your relationships. Keep notes on people you kn
 - **Search** your network by name, nickname, or a part of a name
 - **Archive** people and circles you're no longer actively keeping track of (without losing their data)
 
-## Quick Start (Pre-built Executable)
-
-If someone shared a pre-built executable with you:
-
-```bash
-# Make it executable (macOS/Linux)
-chmod +x relationships
-
-# Run it
-./relationships
-```
-
-On Windows, just double-click `relationships.exe` or run it from Command Prompt.
-
-Your data is stored at `~/.relationships/network.json` (or `%USERPROFILE%\.relationships\network.json` on Windows).
-
----
 
 ## Building from Source
 
 ### Prerequisites
 
 - Java 17 or higher
-- sbt 1.10+ (Scala Build Tool)
+- sbt 1.12+ (Scala Build Tool)
 
 #### Installing sbt
 
-**macOS:**
-```bash
-brew install sbt
-```
+**macOS:** See [Installing sbt on macOS](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Mac.html)
 
 **Linux:** See [Installing sbt on Linux](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Linux.html)
 
@@ -65,79 +45,6 @@ sbt "run --help"
 ```bash
 sbt test
 ```
-
----
-
-## Building a Native Executable
-
-You can compile the application to a standalone native executable that doesn't require Java to run. This is useful for sharing with others.
-
-### Prerequisites for Native Image
-
-You need GraalVM with native-image installed:
-
-**macOS (using SDKMAN - recommended):**
-```bash
-# Install SDKMAN if you don't have it
-curl -s "https://get.sdkman.io" | bash
-source "$HOME/.sdkman/bin/sdkman-init.sh"
-
-# Install GraalVM
-sdk install java 21.0.2-graal
-
-# Verify native-image is available
-native-image --version
-```
-
-**macOS (using Homebrew):**
-```bash
-brew install --cask graalvm-jdk
-# Add to PATH and install native-image
-export GRAALVM_HOME=/Library/Java/JavaVirtualMachines/graalvm-jdk-21/Contents/Home
-export PATH=$GRAALVM_HOME/bin:$PATH
-```
-
-**Linux:**
-```bash
-# Using SDKMAN (recommended)
-sdk install java 21.0.2-graal
-
-# Or download from https://www.graalvm.org/downloads/
-```
-
-**Windows:**
-1. Download GraalVM from https://www.graalvm.org/downloads/
-2. Extract and add to PATH
-3. Install Visual Studio Build Tools (required for native-image on Windows)
-
-### Building the Executable
-
-```bash
-cd relationships
-sbt nativeImage
-```
-
-This will create a native executable at:
-- `target/native-image/relationships` (macOS/Linux)
-- `target/native-image/relationships.exe` (Windows)
-
-The build takes a few minutes. The resulting executable:
-- Is a single file (~15-30 MB)
-- Requires no Java installation to run
-- Starts instantly (no JVM warmup)
-
-### Sharing the Executable
-
-The native executable is self-contained. To share:
-
-1. Build on each target platform (macOS executable won't run on Windows, etc.)
-2. Share the single executable file
-3. Recipients just need to make it executable (`chmod +x`) and run it
-
-**Cross-platform note:** Native executables are platform-specific. You need to build on each OS you want to support:
-- Build on macOS → works on macOS
-- Build on Linux → works on Linux  
-- Build on Windows → works on Windows
 
 ---
 
