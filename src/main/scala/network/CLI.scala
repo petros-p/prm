@@ -131,7 +131,7 @@ class REPL(dataFile: Path) {
     meLabel.foreach { label =>
       NetworkOps.setRelationship(network, self.id, Set(label.id)) match {
         case Right(n) => network = n
-        case Left(_) => // ignore errors
+        case Left(e) => println(s"Error: ${e.message}")
       }
     }
     
@@ -278,62 +278,48 @@ TIPS:
       return
     }
 
-    NetworkOps.addPerson(network, name) match {
-      case Right((updated, person)) =>
-        network = updated
-        save()
-        println(s"Added ${person.name}")
+    withSaveAndResult(NetworkOps.addPerson(network, name)) { person =>
+      println(s"Added ${person.name}")
 
-        print("How did you meet? (press Enter to skip) ")
-        val howWeMet = StdIn.readLine().trim
-        if (howWeMet.nonEmpty) {
-          NetworkOps.updatePerson(network, person.id, howWeMet = Some(Some(howWeMet))) match {
-            case Right(n) => network = n; save()
-            case Left(_) => // ignore
-          }
-        }
+      print("How did you meet? (press Enter to skip) ")
+      val howWeMet = StdIn.readLine().trim
+      if (howWeMet.nonEmpty) {
+        withSave(NetworkOps.updatePerson(network, person.id, howWeMet = Some(Some(howWeMet)))) {}
+      }
 
-        println("Labels (enter numbers separated by spaces, or press Enter to skip):")
-        val labels = network.relationshipLabels.values.toList.sortBy(_.name)
-        labels.zipWithIndex.foreach { case (label, i) =>
-          println(s"  ${i + 1}. ${label.name}")
+      println("Labels (enter numbers separated by spaces, or press Enter to skip):")
+      val labels = network.relationshipLabels.values.toList.sortBy(_.name)
+      labels.zipWithIndex.foreach { case (label, i) =>
+        println(s"  ${i + 1}. ${label.name}")
+      }
+      print("Labels: ")
+      val labelInput = StdIn.readLine().trim
+      if (labelInput.nonEmpty) {
+        val indices = labelInput.split("\\s+").flatMap(s => scala.util.Try(s.toInt - 1).toOption)
+        val selectedLabels = indices.flatMap(i => labels.lift(i)).map(_.id).toSet
+        if (selectedLabels.nonEmpty) {
+          withSave(NetworkOps.setRelationship(network, person.id, selectedLabels)) {}
         }
-        print("Labels: ")
-        val labelInput = StdIn.readLine().trim
-        if (labelInput.nonEmpty) {
-          val indices = labelInput.split("\\s+").flatMap(s => scala.util.Try(s.toInt - 1).toOption)
-          val selectedLabels = indices.flatMap(i => labels.lift(i)).map(_.id).toSet
-          if (selectedLabels.nonEmpty) {
-            NetworkOps.setRelationship(network, person.id, selectedLabels) match {
-              case Right(n) => network = n; save()
-              case Left(_) => // ignore
-            }
-          }
-        }
+      }
 
-        print("Reminder every how many days? (press Enter to skip) ")
-        val reminderInput = StdIn.readLine().trim
-        if (reminderInput.nonEmpty) {
-          scala.util.Try(reminderInput.toInt).toOption match {
-            case Some(days) if days > 0 =>
-              val rel = network.relationships.get(person.id)
-              if (rel.isDefined) {
-                NetworkOps.setReminder(network, person.id, Some(days)) match {
-                  case Right(n) => network = n; save(); println(s"Reminder set for every $days days")
-                  case Left(e) => println(s"Error: ${e.message}")
-                }
-              } else {
-                NetworkOps.setRelationship(network, person.id, reminderDays = Some(days)) match {
-                  case Right(n) => network = n; save(); println(s"Reminder set for every $days days")
-                  case Left(e) => println(s"Error: ${e.message}")
-                }
+      print("Reminder every how many days? (press Enter to skip) ")
+      val reminderInput = StdIn.readLine().trim
+      if (reminderInput.nonEmpty) {
+        scala.util.Try(reminderInput.toInt).toOption match {
+          case Some(days) if days > 0 =>
+            val rel = network.relationships.get(person.id)
+            if (rel.isDefined) {
+              withSave(NetworkOps.setReminder(network, person.id, Some(days))) {
+                println(s"Reminder set for every $days days")
               }
-            case _ => // ignore invalid input
-          }
+            } else {
+              withSave(NetworkOps.setRelationship(network, person.id, reminderDays = Some(days))) {
+                println(s"Reminder set for every $days days")
+              }
+            }
+          case _ => // ignore invalid input
         }
-
-      case Left(err) =>
-        println(s"Error: ${err.message}")
+      }
     }
   }
 
@@ -515,13 +501,8 @@ TIPS:
         val input = StdIn.readLine().trim
         scala.util.Try(input.toInt).toOption match {
           case Some(0) =>
-            NetworkOps.setReminder(network, person.id, None) match {
-              case Right(n) =>
-                network = n
-                save()
-                println(s"Reminder removed for ${person.name}")
-              case Left(_) =>
-                println(s"No reminder was set for ${person.name}")
+            withSave(NetworkOps.setReminder(network, person.id, None)) {
+              println(s"Reminder removed for ${person.name}")
             }
           case Some(days) if days > 0 =>
             val updated = if (!network.relationships.contains(person.id)) {
@@ -529,20 +510,15 @@ TIPS:
             } else {
               NetworkOps.setReminder(network, person.id, Some(days))
             }
-            updated match {
-              case Right(n) =>
-                network = n
-                save()
-                println(s"Reminder set: reach out to ${person.name} every $days days")
-              case Left(e) =>
-                println(s"Error: ${e.message}")
+            withSave(updated) {
+              println(s"Reminder set: reach out to ${person.name} every $days days")
             }
           case _ =>
             println("Invalid number")
         }
 
       case None =>
-        if (args.isEmpty) println("Usage: set-reminder <name>")
+        if (args.isEmpty) println("Usage: set-reminder <n>")
     }
   }
 
@@ -661,22 +637,18 @@ TIPS:
     }
   }
 
+
+
   private def archivePerson(args: List[String]): Unit = {
     findPerson(args) match {
       case Some(person) =>
-        NetworkOps.archivePerson(network, person.id) match {
-          case Right(n) =>
-            network = n
-            save()
-            println(s"Archived ${person.name}")
-          case Left(e) =>
-            println(s"Error: ${e.message}")
+        withSave(NetworkOps.archivePerson(network, person.id)) {
+          println(s"Archived ${person.name}")
         }
       case None =>
-        if (args.isEmpty) println("Usage: archive <name>")
+        if (args.isEmpty) println("Usage: archive <n>")
     }
   }
-
   private def unarchivePerson(args: List[String]): Unit = {
     val query = args.mkString(" ")
     if (query.isEmpty) {
@@ -693,13 +665,8 @@ TIPS:
     matches match {
       case Nil => println(s"No archived person found matching '$query'")
       case List(person) =>
-        NetworkOps.unarchivePerson(network, person.id) match {
-          case Right(n) =>
-            network = n
-            save()
-            println(s"Restored ${person.name}")
-          case Left(e) =>
-            println(s"Error: ${e.message}")
+        withSave(NetworkOps.unarchivePerson(network, person.id)) {
+          println(s"Restored ${person.name}")
         }
       case multiple =>
         println("Multiple matches found:")
@@ -803,10 +770,7 @@ TIPS:
         print(s"Name [${circle.name}]: ")
         val nameInput = StdIn.readLine().trim
         if (nameInput.nonEmpty) {
-          NetworkOps.updateCircle(network, circle.id, name = Some(nameInput)) match {
-            case Right(n) => network = n; save()
-            case Left(e) => println(s"Error: ${e.message}")
-          }
+          withSave(NetworkOps.updateCircle(network, circle.id, name = Some(nameInput))) {}
         }
 
         val currentMembers = NetworkQueries.circleMembers(network, circle.id).map(_.id).toSet
@@ -841,40 +805,31 @@ TIPS:
           }
         }
         
-        NetworkOps.setCircleMembers(network, circle.id, selectedIds) match {
-          case Right(n) =>
-            network = n
-            save()
-            println(s"Circle updated with ${selectedIds.size} members")
-          case Left(e) =>
-            println(s"Error: ${e.message}")
+        withSave(NetworkOps.setCircleMembers(network, circle.id, selectedIds)) {
+          println(s"Circle updated with ${selectedIds.size} members")
         }
 
       case None =>
-        if (args.isEmpty) println("Usage: edit-circle <name>")
+        if (args.isEmpty) println("Usage: edit-circle <n>")
     }
   }
+
 
   private def archiveCircle(args: List[String]): Unit = {
     findCircle(args) match {
       case Some(circle) =>
-        NetworkOps.archiveCircle(network, circle.id) match {
-          case Right(n) =>
-            network = n
-            save()
-            println(s"Archived circle: ${circle.name}")
-          case Left(e) =>
-            println(s"Error: ${e.message}")
+        withSave(NetworkOps.archiveCircle(network, circle.id)) {
+          println(s"Archived circle: ${circle.name}")
         }
       case None =>
-        if (args.isEmpty) println("Usage: archive-circle <name>")
+        if (args.isEmpty) println("Usage: archive-circle <n>")
     }
   }
 
   private def unarchiveCircle(args: List[String]): Unit = {
     val query = args.mkString(" ")
     if (query.isEmpty) {
-      println("Usage: unarchive-circle <name>")
+      println("Usage: unarchive-circle <n>")
       return
     }
 
@@ -884,13 +839,8 @@ TIPS:
     matches match {
       case Nil => println(s"No archived circle found matching '$query'")
       case List(circle) =>
-        NetworkOps.unarchiveCircle(network, circle.id) match {
-          case Right(n) =>
-            network = n
-            save()
-            println(s"Restored circle: ${circle.name}")
-          case Left(e) =>
-            println(s"Error: ${e.message}")
+        withSave(NetworkOps.unarchiveCircle(network, circle.id)) {
+          println(s"Restored circle: ${circle.name}")
         }
       case multiple =>
         println("Multiple matches found:")
@@ -898,6 +848,7 @@ TIPS:
         println("Please be more specific.")
     }
   }
+
 
   private def listArchivedCircles(): Unit = {
     val archived = NetworkQueries.archivedCircles(network)
@@ -936,13 +887,8 @@ TIPS:
         val label = StdIn.readLine().trim
         val labelOpt = if (label.isEmpty) None else Some(label)
 
-        NetworkOps.addPhone(network, person.id, number, labelOpt) match {
-          case Right(n) =>
-            network = n
-            save()
-            println(s"Added phone number for ${person.name}")
-          case Left(e) =>
-            println(s"Error: ${e.message}")
+        withSave(NetworkOps.addPhone(network, person.id, number, labelOpt)) {
+          println(s"Added phone number for ${person.name}")
         }
 
       case None =>
@@ -964,13 +910,8 @@ TIPS:
         val label = StdIn.readLine().trim
         val labelOpt = if (label.isEmpty) None else Some(label)
 
-        NetworkOps.addEmail(network, person.id, email, labelOpt) match {
-          case Right(n) =>
-            network = n
-            save()
-            println(s"Added email for ${person.name}")
-          case Left(e) =>
-            println(s"Error: ${e.message}")
+        withSave(NetworkOps.addEmail(network, person.id, email, labelOpt)) {
+          println(s"Added email for ${person.name}")
         }
 
       case None =>
@@ -1060,6 +1001,28 @@ TIPS:
       case n => s"${n / 365} year(s) ago"
     }
   }
+
+  /** Helper to handle operation results that update the network and save */
+  private def withSave(result: Either[ValidationError, Network])(onSuccess: => Unit): Unit =
+    result match {
+      case Right(n) =>
+        network = n
+        save()
+        onSuccess
+      case Left(e) =>
+        println(s"Error: ${e.message}")
+    }
+
+  /** Helper for operations that return a tuple of (Network, A) */
+  private def withSaveAndResult[A](result: Either[ValidationError, (Network, A)])(onSuccess: A => Unit): Unit =
+    result match {
+      case Right((n, a)) =>
+        network = n
+        save()
+        onSuccess(a)
+      case Left(e) =>
+        println(s"Error: ${e.message}")
+    }
 
   private def save(): Unit = {
     if (!Files.exists(dataFile.getParent)) {
