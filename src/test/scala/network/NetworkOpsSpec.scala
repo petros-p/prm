@@ -164,4 +164,31 @@ class NetworkOpsSpec extends AnyFunSuite with Matchers {
     label.name shouldBe "farming partner"
     updated.relationshipLabels should have size (initialCount + 1)
   }
+
+  test("setRelationship works for self") {
+    val network = createTestNetwork()
+    val friendLabel = network.relationshipLabels.values.find(_.name == "friend").get
+    
+    val result = NetworkOps.setRelationship(network, network.selfId, Set(friendLabel.id), Some(7))
+    
+    result.isRight shouldBe true
+    val updated = getRight(result)
+    updated.relationships(network.selfId).labels shouldBe Set(friendLabel.id)
+    updated.relationships(network.selfId).reminderDays shouldBe Some(7)
+  }
+
+  test("logInPersonInteraction works for self") {
+    val network = createTestNetwork()
+    
+    val result = NetworkOps.logInPersonInteraction(
+      network, network.selfId,
+      location = "Home",
+      topics = Set("journaling", "reflection")
+    )
+    
+    result.isRight shouldBe true
+    val updated = getRight(result)
+    val interaction = updated.relationships(network.selfId).interactionHistory.head
+    interaction.topics should contain allOf ("journaling", "reflection")
+  }
 }

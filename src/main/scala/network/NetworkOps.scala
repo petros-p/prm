@@ -292,8 +292,6 @@ object NetworkOps {
   ): Either[ValidationError, Network] =
     if (!network.people.contains(personId))
       Left(ValidationError.notFound("Person", personId.value.toString))
-    else if (personId == network.selfId)
-      Left(ValidationError("Cannot create relationship with self"))
     else
       Validation.optionalPositive(reminderDays, "reminderDays").map { validReminder =>
         val existing = network.relationships.get(personId)
@@ -317,8 +315,6 @@ object NetworkOps {
         // Create a new relationship with just these labels
         if (!network.people.contains(personId))
           Left(ValidationError.notFound("Person", personId.value.toString))
-        else if (personId == network.selfId)
-          Left(ValidationError("Cannot create relationship with self"))
         else {
           val relationship = Relationship.create(personId, labels)
           Right(network.copy(relationships = network.relationships.updated(personId, relationship)))
@@ -393,8 +389,6 @@ object NetworkOps {
   ): Either[ValidationError, Network] =
     if (!network.people.contains(personId))
       Left(ValidationError.notFound("Person", personId.value.toString))
-    else if (personId == network.selfId)
-      Left(ValidationError("Cannot log interaction with self"))
     else
       for {
         validLocation <- Validation.nonBlank(location, "location")
@@ -436,8 +430,6 @@ object NetworkOps {
   ): Either[ValidationError, Network] =
     if (!network.people.contains(personId))
       Left(ValidationError.notFound("Person", personId.value.toString))
-    else if (personId == network.selfId)
-      Left(ValidationError("Cannot log interaction with self"))
     else if (medium == InteractionMedium.InPerson)
       Left(ValidationError("Use logInPersonInteraction for in-person interactions"))
     else

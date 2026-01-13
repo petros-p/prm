@@ -238,6 +238,7 @@ class ModelSpec extends AnyFunSuite with Matchers {
   test("RelationshipLabel.defaults contains expected labels") {
     val defaultNames = RelationshipLabel.defaults.map(_.name)
     
+    defaultNames should contain("me")
     defaultNames should contain("friend")
     defaultNames should contain("family")
     defaultNames should contain("coworker")

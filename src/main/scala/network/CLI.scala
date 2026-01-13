@@ -109,6 +109,13 @@ class REPL(dataFile: Path) {
     println()
     print("What's your name? ")
     val name = StdIn.readLine().trim
+    val nameLower = name.toLowerCase
+    
+    if (nameLower == "exit" || nameLower == "quit" || nameLower == "q") {
+      running = false
+      return
+    }
+    
     if (name.isEmpty) {
       println("Name cannot be empty. Please restart and try again.")
       running = false
@@ -118,6 +125,16 @@ class REPL(dataFile: Path) {
     user = User.create(name, "")
     val self = Person.createSelf(name)
     network = Network.create(user, self)
+    
+    // Assign "me" label to self
+    val meLabel = network.relationshipLabels.values.find(_.name == "me")
+    meLabel.foreach { label =>
+      NetworkOps.setRelationship(network, self.id, Set(label.id)) match {
+        case Right(n) => network = n
+        case Left(_) => // ignore errors
+      }
+    }
+    
     save()
     println(s"Welcome, $name! Your network has been created.")
     println()

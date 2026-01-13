@@ -1,17 +1,31 @@
 # Personal Relationship Manager
 
-A command-line tool for tracking your relationships. Keep notes on people you know, log interactions, and get reminders to stay in touch.
+A command-line tool for tracking your relationships, including with yourself. Keep notes on people you know, log interactions, and get reminders to stay in touch.
 Currently a prototype.
 
 ## Features
 
-- **Track people** in your network with notes, labels, and contact info
+- **Track people** in your network with notes, labels, and contact info (including yourself)
 - **Log interactions** with medium (In Person, Text, Phone Call, Video Call, Social Media) and locations
-- **Set reminders** to reach out to people on a regular cadence
+- **Set reminders** to reach out to people on a regular cadence (including self-check-in reminders)
 - **Organize** people into circles
 - **Search** your network by name, nickname, or a part of a name
 - **Archive** people and circles you're no longer actively keeping track of (without losing their data)
 
+## Quick Start
+
+```bash
+# Run with sbt
+sbt run
+
+# Or build a JAR and run it
+sbt assembly
+java -jar target/scala-3.7.4/relationships.jar
+```
+
+Your data is stored at `~/.relationships/network.json` (or `%USERPROFILE%\.relationships\network.json` on Windows).
+
+---
 
 ## Building from Source
 
@@ -45,6 +59,20 @@ sbt "run --help"
 
 ```bash
 sbt test
+```
+
+### Building a JAR
+
+To build a standalone JAR file:
+
+```bash
+sbt assembly
+```
+
+This creates `target/scala-3.7.4/relationships.jar` which you can run with:
+
+```bash
+java -jar relationships.jar
 ```
 
 ---

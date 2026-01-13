@@ -358,6 +358,7 @@ object RelationshipLabel {
    * You can add more at any time.
    */
   val defaults: Set[RelationshipLabel] = Set(
+    "me",
     "friend",
     "family",
     "coworker",
