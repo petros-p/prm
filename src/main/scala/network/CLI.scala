@@ -9,7 +9,7 @@ import java.nio.file.{Files, Path, Paths}
  */
 object CLI {
 
-  val defaultDataDir: Path = Paths.get(System.getProperty("user.home"), ".relationships")
+  val defaultDataDir: Path = Paths.get(".data")
   val defaultDataFile: Path = defaultDataDir.resolve("network.json")
 
   def main(args: Array[String]): Unit = {
@@ -36,7 +36,7 @@ USAGE:
 
 OPTIONS:
   --help, -h      Show this help
-  --file <path>   Use custom data file (default: ~/.relationships/network.json)
+  --file <path>   Use custom data file (default: .data/network.json)
 
 Run without options to start the interactive shell.
 """.trim)

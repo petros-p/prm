@@ -3,7 +3,7 @@ val scala3Version = "3.7.4"
 lazy val root = project
   .in(file("."))
   .settings(
-    name := "relationships",
+    name := "prm",
     version := "0.1.0",
     scalaVersion := scala3Version,
     
@@ -16,7 +16,7 @@ lazy val root = project
     Compile / mainClass := Some("network.CLI"),
     
     // Assembly settings (for fat JAR)
-    assembly / assemblyJarName := "relationships.jar",
+    assembly / assemblyJarName := "prm.jar",
     assembly / mainClass := Some("network.CLI"),
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", xs @ _*) => MergeStrategy.discard

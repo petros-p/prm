@@ -1,26 +1,30 @@
 # Personal Relationship Manager
 
-A CLI tool for tracking relationships, interactions, and reminders to stay in touch.
+A CLI tool for tracking relationships, interactions, and reminders to stay in touch. This is a working prototype for proof of concept.
 
-Currently a prototype with basic functionality for proof of concept.
+## Setup
 
-## Quick Start
+1. Install Java 17+ ([download](https://adoptium.net/))
+2. Install sbt ([download](https://www.scala-sbt.org/download.html))
+3. Clone and run:
 
 ```bash
+git clone https://github.com/petros-p/prm.git
+cd prm
 sbt run
 ```
 
-Data is stored at `~/.relationships/network.json`.
+Data is stored at `.data/network.json` within the project directory.
 
-## Basic Commands
+## Commands
 
 | Command | Description |
 |---------|-------------|
 | `list` | List all people |
-| `add <n>` | Add a person |
-| `show-person <n>` | Show person details |
-| `edit <n>` | Edit a person |
-| `log <n>` | Log an interaction |
+| `add <name>` | Add a person |
+| `show-person <name>` | Show person details |
+| `edit <name>` | Edit a person |
+| `log <name>` | Log an interaction |
 | `remind` | Show overdue reminders |
 | `circles` | List circles |
 | `labels` | List labels |
@@ -50,8 +54,19 @@ sbt test
 
 # Build JAR
 sbt assembly
-java -jar target/scala-3.7.4/relationships.jar
+java -jar target/scala-3.7.4/prm.jar
 ```
+
+## Future Work
+
+- [ ] Web app with REST API
+- [ ] Mobile app
+- [ ] Import contacts from phone/email
+- [ ] Automated interaction logging (email, calendar, texts)
+- [ ] Birthday reminders
+- [ ] Relationship strength scoring
+- [ ] Data export (CSV, vCard)
+- [ ] Multi-device sync
 
 ## Example Session
 
@@ -59,44 +74,22 @@ java -jar target/scala-3.7.4/relationships.jar
 > add Guy Testadopoulos
 Added Guy Testadopoulos
 How did you meet? Work conference
-Labels (enter numbers separated by spaces, or press Enter to skip):
-  1. acquaintance
-  2. coworker
-  3. family
-  4. friend
 Labels: 2 4
 Reminder every how many days? 14
 Reminder set for every 14 days
 
-> show-person Guy Testadopoulos
+> show-person Guy
 Name: Guy Testadopoulos
 Nickname: (none)
 Birthday: (none)
 How we met: Work conference
-Notes: (none)
-Default location: (none)
 Labels: coworker, friend
-Circles: (none)
-Phones: (none)
-Emails: (none)
 Reminder: every 14 days
 Last interaction: (never)
-Total interactions: 0
 
-> log Guy Testadopoulos
-Logging interaction with Guy Testadopoulos
-How did you interact?
-  1. In Person
-  2. Text
-  3. Phone Call
-  4. Video Call
-  5. Social Media
+> log Guy
 Medium (1-5): 1
 Location: Coffee shop
 Topics (comma-separated): catch up, work
-Note (optional): 
 Logged interaction with Guy Testadopoulos
-
-> remind
-No overdue reminders! You're all caught up.
 ```

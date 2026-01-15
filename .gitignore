@@ -1,4 +1,5 @@
 .bloop
+.data
 .metals
 .vscode
 project/.bloop
