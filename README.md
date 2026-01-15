@@ -1,6 +1,7 @@
-# Personal Relationship Manager
+# Personal Relationship Manager (PRM)
 
-A CLI tool for tracking relationships, interactions, and reminders to stay in touch. This is a working prototype for proof of concept.
+A CLI tool for tracking relationships, interactions, and reminders to stay in touch.
+This is a working prototype for proof of concept.
 
 ## Setup
 
@@ -16,7 +17,7 @@ sbt run
 
 Data is stored at `.data/network.json` within the project directory.
 
-## Commands
+## Basic Commands
 
 | Command | Description |
 |---------|-------------|
@@ -59,13 +60,13 @@ java -jar target/scala-3.7.4/prm.jar
 
 ## Future Work
 
-- [ ] Web app with REST API
+- [ ] Web app
 - [ ] Mobile app
 - [ ] Import contacts from phone/email
 - [ ] Automated interaction logging (email, calendar, texts)
 - [ ] Birthday reminders
 - [ ] Relationship strength scoring
-- [ ] Data export (CSV, vCard)
+- [ ] Data export
 - [ ] Multi-device sync
 
 ## Example Session
