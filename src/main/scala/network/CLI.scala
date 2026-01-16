@@ -157,6 +157,10 @@ class CLIContext(val dataFile: Path) {
     }
   }
 
+  /**
+   * Formats a number of days as a human-readable relative time string.
+   * Examples: "today", "yesterday", "3 days ago", "2 week(s) ago"
+   */
   def formatDaysAgo(days: Long): String = days match {
     case 0 => "today"
     case 1 => "yesterday"
@@ -296,24 +300,31 @@ class REPL(dataFile: Path) {
     }
   }
 
+  /**
+   * Parses command input, handling quoted strings as single arguments.
+   * For example: `add "Mary Jane"` becomes List("add", "Mary Jane")
+   */
   private def parseInput(input: String): List[String] = {
-    val result = scala.collection.mutable.ListBuffer[String]()
-    val current = new StringBuilder
-    var inQuotes = false
-
-    for (c <- input) {
-      c match {
-        case '"' => inQuotes = !inQuotes
-        case ' ' if !inQuotes =>
-          if (current.nonEmpty) {
-            result += current.toString
-            current.clear()
-          }
-        case _ => current += c
+    case class ParseState(tokens: List[String], current: String, inQuotes: Boolean)
+    
+    val finalState = input.foldLeft(ParseState(List.empty, "", false)) { (state, char) =>
+      char match {
+        case '"' => 
+          state.copy(inQuotes = !state.inQuotes)
+        case ' ' if !state.inQuotes =>
+          if (state.current.nonEmpty)
+            state.copy(tokens = state.tokens :+ state.current, current = "")
+          else
+            state
+        case c => 
+          state.copy(current = state.current + c)
       }
     }
-    if (current.nonEmpty) result += current.toString
-    result.toList
+    
+    if (finalState.current.nonEmpty)
+      finalState.tokens :+ finalState.current
+    else
+      finalState.tokens
   }
 
   private def printCommandHelp(): Unit = {

@@ -88,10 +88,12 @@ class CircleCommands(ctx: CLIContext) {
         println()
         println("Edit members (enter numbers to toggle, press Enter when done):")
 
-        var selectedIds = currentMembers
-        var editing = true
-
-        while (editing) {
+        /**
+         * Recursively prompts user to toggle circle members until they press Enter.
+         * Returns the final set of selected person IDs.
+         */
+        @scala.annotation.tailrec
+        def toggleMembers(selectedIds: Set[Id[Person]]): Set[Id[Person]] = {
           allPeople.zipWithIndex.foreach { case (person, i) =>
             val marker = if (selectedIds.contains(person.id)) "[x]" else "[ ]"
             println(s"  ${i + 1}. $marker ${person.name}")
@@ -100,22 +102,24 @@ class CircleCommands(ctx: CLIContext) {
           val input = StdIn.readLine().trim
 
           if (input.isEmpty) {
-            editing = false
+            selectedIds
           } else {
-            input.split("\\s+").foreach { s =>
-              scala.util.Try(s.toInt - 1).toOption.flatMap(i => allPeople.lift(i)).foreach { person =>
-                if (selectedIds.contains(person.id)) {
-                  selectedIds = selectedIds - person.id
-                } else {
-                  selectedIds = selectedIds + person.id
-                }
+            val updatedIds = input.split("\\s+").foldLeft(selectedIds) { (ids, s) =>
+              scala.util.Try(s.toInt - 1).toOption.flatMap(i => allPeople.lift(i)) match {
+                case Some(person) =>
+                  if (ids.contains(person.id)) ids - person.id else ids + person.id
+                case None =>
+                  ids
               }
             }
+            toggleMembers(updatedIds)
           }
         }
 
-        ctx.withSave(NetworkOps.setCircleMembers(ctx.network, circle.id, selectedIds)) {
-          println(s"Circle updated with ${selectedIds.size} members")
+        val finalSelectedIds = toggleMembers(currentMembers)
+
+        ctx.withSave(NetworkOps.setCircleMembers(ctx.network, circle.id, finalSelectedIds)) {
+          println(s"Circle updated with ${finalSelectedIds.size} members")
         }
 
       case None =>

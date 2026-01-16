@@ -76,7 +76,8 @@ class PersonCommands(ctx: CLIContext) {
                 println(s"Reminder set for every $days days")
               }
             }
-          case _ => // ignore invalid input
+          case _ => 
+            println("Invalid number, skipping reminder.")
         }
       }
     }
@@ -188,10 +189,12 @@ class PersonCommands(ctx: CLIContext) {
         println(s"Current: ${if (currentLabels.isEmpty) "(none)" else currentLabels.map(_.name).toList.sorted.mkString(", ")}")
         println()
 
-        var selectedIds = currentLabels.map(_.id)
-        var editing = true
-
-        while (editing) {
+        /**
+         * Recursively prompts user to toggle labels until they press Enter.
+         * Returns the final set of selected label IDs.
+         */
+        @scala.annotation.tailrec
+        def toggleLabels(selectedIds: Set[Id[RelationshipLabel]]): Set[Id[RelationshipLabel]] = {
           allLabels.zipWithIndex.foreach { case (label, i) =>
             val marker = if (selectedIds.contains(label.id)) "[x]" else "[ ]"
             println(s"  ${i + 1}. $marker ${label.name}")
@@ -200,22 +203,24 @@ class PersonCommands(ctx: CLIContext) {
           val input = StdIn.readLine().trim
 
           if (input.isEmpty) {
-            editing = false
+            selectedIds
           } else {
-            input.split("\\s+").foreach { s =>
-              scala.util.Try(s.toInt - 1).toOption.flatMap(i => allLabels.lift(i)).foreach { label =>
-                if (selectedIds.contains(label.id)) {
-                  selectedIds = selectedIds - label.id
-                } else {
-                  selectedIds = selectedIds + label.id
-                }
+            val updatedIds = input.split("\\s+").foldLeft(selectedIds) { (ids, s) =>
+              scala.util.Try(s.toInt - 1).toOption.flatMap(i => allLabels.lift(i)) match {
+                case Some(label) =>
+                  if (ids.contains(label.id)) ids - label.id else ids + label.id
+                case None => 
+                  ids
               }
             }
+            toggleLabels(updatedIds)
           }
         }
 
-        ctx.withSave(NetworkOps.setLabels(ctx.network, person.id, selectedIds)) {
-          val finalLabels = selectedIds.flatMap(ctx.network.relationshipLabels.get).map(_.name).toList.sorted
+        val finalSelectedIds = toggleLabels(currentLabels.map(_.id))
+
+        ctx.withSave(NetworkOps.setLabels(ctx.network, person.id, finalSelectedIds)) {
+          val finalLabels = finalSelectedIds.flatMap(ctx.network.relationshipLabels.get).map(_.name).toList.sorted
           println()
           println(s"Updated ${newName.getOrElse(person.name)}")
           println(s"Labels: ${if (finalLabels.isEmpty) "(none)" else finalLabels.mkString(", ")}")
