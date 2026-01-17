@@ -7,6 +7,10 @@ import scala.io.StdIn
  */
 class InteractionCommands(ctx: CLIContext) {
 
+  /**
+   * Logs an interaction with a person.
+   * Delegates to logForPerson after finding the person.
+   */
   def log(args: List[String]): Unit = {
     ctx.findPerson(args) match {
       case Some(person) => logForPerson(person)
@@ -83,6 +87,9 @@ class InteractionCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Displays all people with overdue reminders.
+   */
   def showReminders(): Unit = {
     val overdue = NetworkQueries.peopleNeedingReminder(ctx.network)
     if (overdue.isEmpty) {
@@ -106,6 +113,10 @@ class InteractionCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Sets or removes a reminder frequency for a person.
+   * Enter 0 to remove an existing reminder.
+   */
   def setReminder(args: List[String]): Unit = {
     ctx.findPerson(args) match {
       case Some(person) =>
@@ -134,6 +145,9 @@ class InteractionCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Prints network statistics: people count, interactions, circles, overdue reminders.
+   */
   def printStats(): Unit = {
     val s = NetworkQueries.stats(ctx.network)
     println()

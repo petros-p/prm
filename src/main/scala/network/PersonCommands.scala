@@ -269,6 +269,9 @@ class PersonCommands(ctx: CLIContext) {
   // GRANULAR EDIT COMMANDS
   // ============================================================================
 
+  /**
+   * Edits a person's name via direct command.
+   */
   def editName(args: List[String]): Unit = {
     ctx.findPerson(args) match {
       case Some(person) => editNameCmd(person)
@@ -276,6 +279,9 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Edits a person's nickname via direct command.
+   */
   def editNickname(args: List[String]): Unit = {
     ctx.findPerson(args) match {
       case Some(person) => editNicknameCmd(person)
@@ -283,6 +289,9 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Edits a person's birthday via direct command.
+   */
   def editBirthday(args: List[String]): Unit = {
     ctx.findPerson(args) match {
       case Some(person) => editBirthdayCmd(person)
@@ -290,6 +299,9 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Edits how you met a person via direct command.
+   */
   def editHowWeMet(args: List[String]): Unit = {
     ctx.findPerson(args) match {
       case Some(person) => editHowWeMetCmd(person)
@@ -297,6 +309,9 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Edits a person's notes via direct command.
+   */
   def editNotes(args: List[String]): Unit = {
     ctx.findPerson(args) match {
       case Some(person) => editNotesCmd(person)
@@ -304,6 +319,9 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Edits a person's location via direct command.
+   */
   def editLocation(args: List[String]): Unit = {
     ctx.findPerson(args) match {
       case Some(person) => editLocationCmd(person)
@@ -311,6 +329,9 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Edits a person's labels via direct command.
+   */
   def editLabels(args: List[String]): Unit = {
     ctx.findPerson(args) match {
       case Some(person) => editLabelsCmd(person)
@@ -318,6 +339,9 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Edits a person's circle memberships via direct command.
+   */
   def editCircles(args: List[String]): Unit = {
     ctx.findPerson(args) match {
       case Some(person) => editCirclesCmd(person)
@@ -325,6 +349,9 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Edits a person's phone numbers via direct command.
+   */
   def editPhone(args: List[String]): Unit = {
     ctx.findPerson(args) match {
       case Some(person) => editPhonesCmd(person)
@@ -332,6 +359,9 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Edits a person's email addresses via direct command.
+   */
   def editEmail(args: List[String]): Unit = {
     ctx.findPerson(args) match {
       case Some(person) => editEmailsCmd(person)
@@ -343,6 +373,9 @@ class PersonCommands(ctx: CLIContext) {
   // INTERNAL EDIT IMPLEMENTATIONS
   // ============================================================================
 
+  /**
+   * Prompts for and updates a person's name.
+   */
   private def editNameCmd(person: Person): Unit = {
     print(s"Name [${person.name}]: ")
     val input = StdIn.readLine().trim
@@ -353,6 +386,9 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Prompts for and updates a person's nickname.
+   */
   private def editNicknameCmd(person: Person): Unit = {
     print(s"Nickname [${person.nickname.getOrElse("")}] (enter 'clear' to remove): ")
     val input = StdIn.readLine().trim
@@ -367,6 +403,9 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Prompts for and updates a person's birthday.
+   */
   private def editBirthdayCmd(person: Person): Unit = {
     print(s"Birthday [${person.birthday.map(_.toString).getOrElse("")}] (YYYY-MM-DD, 'clear' to remove): ")
     val input = StdIn.readLine().trim
@@ -387,6 +426,9 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Prompts for and updates how you met a person.
+   */
   private def editHowWeMetCmd(person: Person): Unit = {
     print(s"How we met [${person.howWeMet.getOrElse("")}] ('clear' to remove): ")
     val input = StdIn.readLine().trim
@@ -401,6 +443,9 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Prompts for and updates a person's notes.
+   */
   private def editNotesCmd(person: Person): Unit = {
     print(s"Notes [${person.notes.getOrElse("")}] ('clear' to remove): ")
     val input = StdIn.readLine().trim
@@ -415,6 +460,9 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Prompts for and updates a person's location.
+   */
   private def editLocationCmd(person: Person): Unit = {
     print(s"Location [${person.location.getOrElse("")}] ('clear' to remove): ")
     val input = StdIn.readLine().trim
@@ -429,14 +477,24 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Delegates to selectLabels for label editing.
+   */
   private def editLabelsCmd(person: Person): Unit = {
     selectLabels(person.id)
   }
 
+  /**
+   * Delegates to selectCircles for circle editing.
+   */
   private def editCirclesCmd(person: Person): Unit = {
     selectCircles(person.id)
   }
 
+  /**
+   * Interactive editor for a person's phone numbers.
+   * Allows adding and removing phone entries.
+   */
   private def editPhonesCmd(person: Person): Unit = {
     val phones = person.contactInfo.filter(_.contactType == ContactType.Phone)
     println()
@@ -493,6 +551,10 @@ class PersonCommands(ctx: CLIContext) {
     editLoop()
   }
 
+  /**
+   * Interactive editor for a person's email addresses.
+   * Allows adding and removing email entries.
+   */
   private def editEmailsCmd(person: Person): Unit = {
     val emails = person.contactInfo.filter(_.contactType == ContactType.Email)
     println()
@@ -553,6 +615,10 @@ class PersonCommands(ctx: CLIContext) {
   // HELPER METHODS
   // ============================================================================
 
+  /**
+   * Updates one or more fields on a person and saves.
+   * Wraps NetworkOps.updatePerson with automatic save.
+   */
   private def updateField(
     personId: Id[Person],
     name: Option[String] = None,
@@ -571,11 +637,19 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Parses a date string in YYYY-MM-DD format.
+   * Returns None if the format is invalid.
+   */
   private def parseDate(input: String): Option[LocalDate] = {
     try Some(LocalDate.parse(input, dateFormatter))
     catch case _: Exception => None
   }
 
+  /**
+   * Interactive toggle interface for selecting labels for a person.
+   * Displays all active labels with checkboxes, user toggles by number.
+   */
   private def selectLabels(personId: Id[Person]): Unit = {
     val allLabels = NetworkQueries.activeLabels(ctx.network)
     if (allLabels.isEmpty) {
@@ -617,6 +691,10 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Interactive toggle interface for selecting circles for a person.
+   * Displays all active circles with checkboxes, user toggles by number.
+   */
   private def selectCircles(personId: Id[Person]): Unit = {
     val allCircles = NetworkQueries.activeCircles(ctx.network)
     if (allCircles.isEmpty) {
@@ -676,6 +754,10 @@ class PersonCommands(ctx: CLIContext) {
     println(s"Circles: ${if (names.isEmpty) "(none)" else names.mkString(", ")}")
   }
 
+  /**
+   * Prompts to add multiple phone numbers in a loop.
+   * Continues until user presses Enter without input.
+   */
   private def addPhones(personId: Id[Person]): Unit = {
     @scala.annotation.tailrec
     def addLoop(): Unit = {
@@ -694,6 +776,10 @@ class PersonCommands(ctx: CLIContext) {
     addLoop()
   }
 
+  /**
+   * Prompts to add multiple email addresses in a loop.
+   * Continues until user presses Enter without input.
+   */
   private def addEmails(personId: Id[Person]): Unit = {
     @scala.annotation.tailrec
     def addLoop(): Unit = {
@@ -712,6 +798,10 @@ class PersonCommands(ctx: CLIContext) {
     addLoop()
   }
 
+  /**
+   * Prompts for and sets a reminder frequency for a person.
+   * Creates a relationship if one doesn't exist.
+   */
   private def setReminderFor(personId: Id[Person]): Unit = {
     print("Remind every how many days: ")
     val input = StdIn.readLine().trim
@@ -730,6 +820,10 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Formats contact entries of a given type as a comma-separated string.
+   * Returns "(none)" if no entries of that type exist.
+   */
   private def formatContacts(contacts: List[ContactEntry], contactType: ContactType): String = {
     val filtered = contacts.filter(_.contactType == contactType)
     if (filtered.isEmpty) "(none)"
@@ -747,6 +841,10 @@ class PersonCommands(ctx: CLIContext) {
   // FIND COMMAND (searches people, circles, labels)
   // ============================================================================
 
+  /**
+   * Searches across people, circles, and labels by name.
+   * Displays all matches grouped by type.
+   */
   def find(args: List[String]): Unit = {
     if (args.isEmpty) {
       println("Usage: find <query>")
@@ -807,6 +905,9 @@ class PersonCommands(ctx: CLIContext) {
   // ARCHIVE COMMANDS
   // ============================================================================
 
+  /**
+   * Archives a person, hiding them from main views.
+   */
   def archive(args: List[String]): Unit = {
     ctx.findPerson(args) match {
       case Some(person) =>
@@ -818,6 +919,9 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Restores an archived person to active status.
+   */
   def unarchive(args: List[String]): Unit = {
     val query = args.mkString(" ")
     if (query.isEmpty) {
@@ -844,6 +948,9 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Lists all archived people.
+   */
   def listArchived(): Unit = {
     val archived = NetworkQueries.archivedPeople(ctx.network)
     if (archived.isEmpty) {

@@ -51,6 +51,11 @@ class CLIContext(val dataFile: Path) {
   var network: Network = uninitialized
   var user: User = uninitialized
 
+  /**
+   * Executes an operation that returns Either[ValidationError, Network].
+   * On success, updates network state, saves, and runs the callback.
+   * On failure, prints the error message.
+   */
   def withSave(result: Either[ValidationError, Network])(onSuccess: => Unit): Unit =
     result match {
       case Right(n) =>
@@ -61,6 +66,11 @@ class CLIContext(val dataFile: Path) {
         println(s"Error: ${e.message}")
     }
 
+  /**
+   * Executes an operation that returns Either[ValidationError, (Network, A)].
+   * On success, updates network state, saves, and passes the result to the callback.
+   * On failure, prints the error message.
+   */
   def withSaveAndResult[A](result: Either[ValidationError, (Network, A)])(onSuccess: A => Unit): Unit =
     result match {
       case Right((n, a)) =>
@@ -71,6 +81,10 @@ class CLIContext(val dataFile: Path) {
         println(s"Error: ${e.message}")
     }
 
+  /**
+   * Persists the current network state to the data file.
+   * Creates the parent directory if it doesn't exist.
+   */
   def save(): Unit = {
     if (!Files.exists(dataFile.getParent)) {
       Files.createDirectories(dataFile.getParent)
@@ -81,6 +95,10 @@ class CLIContext(val dataFile: Path) {
     }
   }
 
+  /**
+   * Finds an active person by name or nickname (case-insensitive partial match).
+   * Returns None and prints a message if not found or ambiguous.
+   */
   def findPerson(args: List[String]): Option[Person] = {
     val query = args.mkString(" ")
     if (query.isEmpty) return None
@@ -109,6 +127,10 @@ class CLIContext(val dataFile: Path) {
     }
   }
 
+  /**
+   * Finds an active circle by name (case-insensitive partial match).
+   * Returns None and prints a message if not found or ambiguous.
+   */
   def findCircle(args: List[String]): Option[Circle] = {
     val query = args.mkString(" ")
     if (query.isEmpty) return None
@@ -133,6 +155,10 @@ class CLIContext(val dataFile: Path) {
     }
   }
 
+  /**
+   * Finds an active label by name (case-insensitive partial match).
+   * Returns None and prints a message if not found or ambiguous.
+   */
   def findLabel(args: List[String]): Option[RelationshipLabel] = {
     val query = args.mkString(" ")
     if (query.isEmpty) return None
@@ -183,6 +209,10 @@ class REPL(dataFile: Path) {
   private val interactionCommands = new InteractionCommands(ctx)
   private var running = true
 
+  /**
+   * Starts the REPL loop.
+   * Loads existing network or initializes a new one, then processes commands until exit.
+   */
   def run(): Unit = {
     println("Personal Relationship Manager")
     println("Type 'help' for commands, 'exit' to quit.")
@@ -201,6 +231,9 @@ class REPL(dataFile: Path) {
     }
   }
 
+  /**
+   * Loads network from file if it exists, otherwise initializes a new network.
+   */
   private def loadOrInit(): Unit = {
     if (Files.exists(dataFile)) {
       JsonCodecs.loadFromFile(dataFile.toString) match {
@@ -220,6 +253,10 @@ class REPL(dataFile: Path) {
     }
   }
 
+  /**
+   * Prompts for user's name and creates a new network.
+   * Sets up the self person with the "me" label.
+   */
   private def initNewNetwork(): Unit = {
     println()
     print("What's your name? ")
@@ -255,6 +292,9 @@ class REPL(dataFile: Path) {
     println()
   }
 
+  /**
+   * Parses and dispatches a command to the appropriate handler.
+   */
   private def handleCommand(input: String): Unit = {
     val parts = parseInput(input)
     if (parts.isEmpty) return
@@ -345,6 +385,9 @@ class REPL(dataFile: Path) {
       finalState.tokens
   }
 
+  /**
+   * Displays the help text with all available commands.
+   */
   private def printCommandHelp(): Unit = {
     println("""
 COMMANDS:
