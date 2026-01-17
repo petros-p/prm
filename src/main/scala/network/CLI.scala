@@ -39,6 +39,7 @@ OPTIONS:
   --file <path>   Use custom data file (default: .data/network.json)
 
 Run without options to start the interactive shell.
+Type 'exit', 'quit', or 'q' to exit.
 """.trim)
   }
 }
@@ -136,7 +137,7 @@ class CLIContext(val dataFile: Path) {
     val query = args.mkString(" ")
     if (query.isEmpty) return None
 
-    val labels = network.relationshipLabels.values.toList
+    val labels = NetworkQueries.activeLabels(network)
     val matches = labels.filter(_.name.toLowerCase.contains(query.toLowerCase))
 
     matches match {
@@ -178,12 +179,13 @@ class REPL(dataFile: Path) {
   private val ctx = new CLIContext(dataFile)
   private val personCommands = new PersonCommands(ctx)
   private val circleCommands = new CircleCommands(ctx)
+  private val labelCommands = new LabelCommands(ctx)
   private val interactionCommands = new InteractionCommands(ctx)
   private var running = true
 
   def run(): Unit = {
     println("Personal Relationship Manager")
-    println("Type 'help' for commands, 'exit' to exit.")
+    println("Type 'help' for commands, 'exit' to quit.")
     println()
 
     loadOrInit()
@@ -265,14 +267,26 @@ class REPL(dataFile: Path) {
       case "quit" | "exit" | "q" => running = false
 
       // Person commands
-      case "list" | "ls" => personCommands.list()
-      case "add" => personCommands.add(args)
+      case "people" | "list" | "ls" => personCommands.list()
+      case "add-person" => personCommands.add(args)
       case "show-person" | "show" | "view" => personCommands.show(args)
-      case "edit" => personCommands.edit(args)
-      case "search" | "find" => personCommands.search(args)
-      case "archive" => personCommands.archive(args)
-      case "unarchive" => personCommands.unarchive(args)
-      case "archived" => personCommands.listArchived()
+      case "edit-person" => personCommands.edit(args)
+      case "find" => personCommands.find(args)
+      case "archive-person" => personCommands.archive(args)
+      case "unarchive-person" => personCommands.unarchive(args)
+      case "archived-people" => personCommands.listArchived()
+
+      // Granular person edit commands
+      case "edit-name" => personCommands.editName(args)
+      case "edit-nickname" => personCommands.editNickname(args)
+      case "edit-birthday" => personCommands.editBirthday(args)
+      case "edit-how-we-met" => personCommands.editHowWeMet(args)
+      case "edit-notes" => personCommands.editNotes(args)
+      case "edit-location" => personCommands.editLocation(args)
+      case "edit-labels" => personCommands.editLabels(args)
+      case "edit-circles" => personCommands.editCircles(args)
+      case "edit-phone" => personCommands.editPhone(args)
+      case "edit-email" => personCommands.editEmail(args)
 
       // Circle commands
       case "circles" => circleCommands.list()
@@ -284,8 +298,13 @@ class REPL(dataFile: Path) {
       case "archived-circles" => circleCommands.listArchived()
 
       // Label commands
-      case "labels" => interactionCommands.listLabels()
-      case "show-label" => interactionCommands.showLabel(args)
+      case "labels" => labelCommands.list()
+      case "add-label" => labelCommands.add(args)
+      case "show-label" => labelCommands.show(args)
+      case "edit-label" => labelCommands.edit(args)
+      case "archive-label" => labelCommands.archive(args)
+      case "unarchive-label" => labelCommands.unarchive(args)
+      case "archived-labels" => labelCommands.listArchived()
 
       // Interaction commands
       case "log" => interactionCommands.log(args)
@@ -294,7 +313,6 @@ class REPL(dataFile: Path) {
 
       // Other
       case "stats" => interactionCommands.printStats()
-      case "save" => ctx.save(); println("Saved.")
       case "" => // ignore empty
       case _ => println(s"Unknown command: $command. Type 'help' for commands.")
     }
@@ -302,7 +320,7 @@ class REPL(dataFile: Path) {
 
   /**
    * Parses command input, handling quoted strings as single arguments.
-   * For example: `add "Mary Jane"` becomes List("add", "Mary Jane")
+   * For example: `add-person "Mary Jane"` becomes List("add-person", "Mary Jane")
    */
   private def parseInput(input: String): List[String] = {
     case class ParseState(tokens: List[String], current: String, inQuotes: Boolean)
@@ -332,18 +350,30 @@ class REPL(dataFile: Path) {
 COMMANDS:
 
   People:
-    list                    List all people
-    add <name>              Add a new person
+    people                  List all people
+    add-person [name]       Add a new person (interactive)
     show-person <name>      Show person details
-    edit <name>             Edit a person
-    search <query>          Search by name
-    archive <name>          Archive a person
-    unarchive <name>        Restore archived person
-    archived                List archived people
+    edit-person <name>      Edit a person (menu)
+    find <query>            Search people, circles, and labels
+    archive-person <name>   Archive a person
+    unarchive-person <name> Restore archived person
+    archived-people         List archived people
+
+  Person Quick Edits:
+    edit-name <name>        Edit person's name
+    edit-nickname <name>    Edit person's nickname
+    edit-birthday <name>    Edit person's birthday
+    edit-how-we-met <name>  Edit how you met
+    edit-notes <name>       Edit person's notes
+    edit-location <name>    Edit person's location
+    edit-labels <name>      Edit person's labels
+    edit-circles <name>     Edit person's circles
+    edit-phone <name>       Edit person's phone numbers
+    edit-email <name>       Edit person's email addresses
 
   Circles:
     circles                 List all circles
-    add-circle <name>       Create a new circle
+    add-circle [name]       Create a new circle
     show-circle <name>      Show circle details
     edit-circle <name>      Edit a circle
     archive-circle <name>   Archive a circle
@@ -352,7 +382,12 @@ COMMANDS:
 
   Labels:
     labels                  List all labels
+    add-label [name]        Create a new label
     show-label <name>       Show label details
+    edit-label <name>       Edit a label
+    archive-label <name>    Archive a label
+    unarchive-label <name>  Restore archived label
+    archived-labels         List archived labels
 
   Interactions:
     log <name>              Log an interaction
@@ -361,14 +396,12 @@ COMMANDS:
 
   Other:
     stats                   Show statistics
-    save                    Manual save
     help                    Show this help
-    exit                    Exit
+    exit / quit / q         Exit
 
 TIPS:
-  - Names are case-insensitive
-  - Partial matches work
-  - Use quotes for names with spaces: add "Mary Jane"
+  - Names are case-insensitive and partial matches work
+  - Press 's' during add-person to save and exit early
 """.trim)
   }
 }

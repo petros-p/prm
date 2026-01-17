@@ -3,77 +3,83 @@ package network
 import scala.io.StdIn
 
 /**
- * CLI commands for interactions, reminders, labels, and stats.
+ * CLI commands for interactions, reminders, and stats.
  */
 class InteractionCommands(ctx: CLIContext) {
 
   def log(args: List[String]): Unit = {
     ctx.findPerson(args) match {
-      case Some(person) =>
-        println(s"Logging interaction with ${person.name}")
-
-        println("How did you interact?")
-        InteractionMedium.all.zipWithIndex.foreach { case (medium, i) =>
-          println(s"  ${i + 1}. ${InteractionMedium.name(medium)}")
-        }
-        print("Medium (1-5): ")
-        val mediumInput = StdIn.readLine().trim
-        val medium = scala.util.Try(mediumInput.toInt - 1).toOption
-          .flatMap(i => InteractionMedium.all.lift(i))
-          .getOrElse {
-            println("Invalid selection, defaulting to In Person")
-            InteractionMedium.InPerson
-          }
-
-        val (myLocation, theirLocation) = if (medium == InteractionMedium.InPerson) {
-          val defaultLoc = person.defaultLocation.map(l => s" [$l]").getOrElse("")
-          print(s"Location$defaultLoc: ")
-          val locInput = StdIn.readLine().trim
-          val loc = if (locInput.isEmpty) person.defaultLocation.getOrElse("") else locInput
-          if (loc.isEmpty) {
-            println("Location is required.")
-            return
-          }
-          (loc, Some(loc))
-        } else {
-          print("Your location: ")
-          val myLoc = StdIn.readLine().trim
-          if (myLoc.isEmpty) {
-            println("Your location is required.")
-            return
-          }
-
-          val defaultLoc = person.defaultLocation.map(l => s" [$l]").getOrElse("")
-          print(s"Their location (optional)$defaultLoc: ")
-          val theirLocInput = StdIn.readLine().trim
-          val theirLoc = if (theirLocInput.isEmpty) person.defaultLocation else Some(theirLocInput)
-          (myLoc, theirLoc)
-        }
-
-        print("Topics (comma-separated): ")
-        val topicsInput = StdIn.readLine().trim
-        val topics = topicsInput.split(",").map(_.trim).filter(_.nonEmpty).toSet
-        if (topics.isEmpty) {
-          println("At least one topic is required.")
-          return
-        }
-
-        print("Note (optional): ")
-        val note = StdIn.readLine().trim
-        val noteOpt = if (note.isEmpty) None else Some(note)
-
-        val result = if (medium == InteractionMedium.InPerson) {
-          NetworkOps.logInPersonInteraction(ctx.network, person.id, myLocation, topics, noteOpt)
-        } else {
-          NetworkOps.logRemoteInteraction(ctx.network, person.id, medium, myLocation, theirLocation, topics, noteOpt)
-        }
-
-        ctx.withSave(result) {
-          println(s"Logged interaction with ${person.name}")
-        }
-
+      case Some(person) => logForPerson(person)
       case None =>
         if (args.isEmpty) println("Usage: log <n>")
+    }
+  }
+
+  /**
+   * Logs an interaction for a specific person.
+   * Can be called directly from other commands (e.g., add-person flow).
+   */
+  def logForPerson(person: Person): Unit = {
+    println(s"Logging interaction with ${person.name}")
+
+    println("How did you interact?")
+    InteractionMedium.all.zipWithIndex.foreach { case (medium, i) =>
+      println(s"  ${i + 1}. ${InteractionMedium.name(medium)}")
+    }
+    print("Medium (1-5): ")
+    val mediumInput = StdIn.readLine().trim
+    val medium = scala.util.Try(mediumInput.toInt - 1).toOption
+      .flatMap(i => InteractionMedium.all.lift(i))
+      .getOrElse {
+        println("Invalid selection, defaulting to In Person")
+        InteractionMedium.InPerson
+      }
+
+    val (myLocation, theirLocation) = if (medium == InteractionMedium.InPerson) {
+      val defaultLoc = person.location.map(l => s" [$l]").getOrElse("")
+      print(s"Location$defaultLoc: ")
+      val locInput = StdIn.readLine().trim
+      val loc = if (locInput.isEmpty) person.location.getOrElse("") else locInput
+      if (loc.isEmpty) {
+        println("Location is required.")
+        return
+      }
+      (loc, Some(loc))
+    } else {
+      print("Your location: ")
+      val myLoc = StdIn.readLine().trim
+      if (myLoc.isEmpty) {
+        println("Your location is required.")
+        return
+      }
+
+      val defaultLoc = person.location.map(l => s" [$l]").getOrElse("")
+      print(s"Their location (optional)$defaultLoc: ")
+      val theirLocInput = StdIn.readLine().trim
+      val theirLoc = if (theirLocInput.isEmpty) person.location else Some(theirLocInput)
+      (myLoc, theirLoc)
+    }
+
+    print("Topics (comma-separated): ")
+    val topicsInput = StdIn.readLine().trim
+    val topics = topicsInput.split(",").map(_.trim).filter(_.nonEmpty).toSet
+    if (topics.isEmpty) {
+      println("At least one topic is required.")
+      return
+    }
+
+    print("Note (optional): ")
+    val note = StdIn.readLine().trim
+    val noteOpt = if (note.isEmpty) None else Some(note)
+
+    val result = if (medium == InteractionMedium.InPerson) {
+      NetworkOps.logInPersonInteraction(ctx.network, person.id, myLocation, topics, noteOpt)
+    } else {
+      NetworkOps.logRemoteInteraction(ctx.network, person.id, medium, myLocation, theirLocation, topics, noteOpt)
+    }
+
+    ctx.withSave(result) {
+      println(s"Logged interaction with ${person.name}")
     }
   }
 
@@ -125,30 +131,6 @@ class InteractionCommands(ctx: CLIContext) {
 
       case None =>
         if (args.isEmpty) println("Usage: set-reminder <n>")
-    }
-  }
-
-  def listLabels(): Unit = {
-    val labels = ctx.network.relationshipLabels.values.toList.sortBy(_.name)
-    println(s"Relationship labels (${labels.size}):")
-    for (label <- labels) {
-      val count = NetworkQueries.peopleWithLabel(ctx.network, label.id).size
-      println(s"  ${label.name} ($count)")
-    }
-  }
-
-  def showLabel(args: List[String]): Unit = {
-    ctx.findLabel(args) match {
-      case Some(label) =>
-        println()
-        println(s"Label: ${label.name}")
-
-        val people = NetworkQueries.peopleWithLabel(ctx.network, label.id)
-        println(s"People: ${if (people.isEmpty) "(none)" else people.map(_.name).mkString(", ")}")
-        println()
-
-      case None =>
-        if (args.isEmpty) println("Usage: show-label <n>")
     }
   }
 

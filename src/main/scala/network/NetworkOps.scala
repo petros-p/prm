@@ -54,7 +54,7 @@ object NetworkOps {
     howWeMet: Option[String] = None,
     birthday: Option[LocalDate] = None,
     notes: Option[String] = None,
-    defaultLocation: Option[String] = None,
+    location: Option[String] = None,
     contactInfo: List[ContactEntry] = List.empty
   ): Either[ValidationError, (Network, Person)] =
     for {
@@ -66,7 +66,7 @@ object NetworkOps {
         howWeMet = howWeMet.map(_.trim).filter(_.nonEmpty),
         birthday = birthday,
         notes = notes.map(_.trim).filter(_.nonEmpty),
-        defaultLocation = defaultLocation.map(_.trim).filter(_.nonEmpty),
+        location = location.map(_.trim).filter(_.nonEmpty),
         contactInfo = contactInfo
       )
       val updatedNetwork = network.copy(
@@ -86,7 +86,8 @@ object NetworkOps {
     howWeMet: Option[Option[String]] = None,
     birthday: Option[Option[LocalDate]] = None,
     notes: Option[Option[String]] = None,
-    defaultLocation: Option[Option[String]] = None
+    location: Option[Option[String]] = None,
+    contactInfo: Option[List[ContactEntry]] = None
   ): Either[ValidationError, Network] =
     network.people.get(personId) match {
       case None => Left(ValidationError.notFound("Person", personId.value.toString))
@@ -103,7 +104,8 @@ object NetworkOps {
             howWeMet = howWeMet.getOrElse(person.howWeMet),
             birthday = birthday.getOrElse(person.birthday),
             notes = notes.getOrElse(person.notes),
-            defaultLocation = defaultLocation.getOrElse(person.defaultLocation)
+            location = location.getOrElse(person.location),
+            contactInfo = contactInfo.getOrElse(person.contactInfo)
           )
           network.copy(people = network.people.updated(personId, updated))
         }
@@ -623,5 +625,61 @@ object NetworkOps {
         relationshipLabels = network.relationshipLabels + (label.id -> label)
       )
       (updatedNetwork, label)
+    }
+
+  /**
+   * Updates an existing label's name.
+   */
+  def updateLabel(
+    network: Network,
+    labelId: Id[RelationshipLabel],
+    name: Option[String] = None
+  ): Either[ValidationError, Network] =
+    network.relationshipLabels.get(labelId) match {
+      case None => Left(ValidationError.notFound("Label", labelId.value.toString))
+      case Some(label) =>
+        val nameValidation = name match {
+          case Some(n) => 
+            for {
+              validName <- Validation.nonBlank(n, "name")
+              _ <- {
+                val exists = network.relationshipLabels.values.exists(l => 
+                  l.id != labelId && l.name.equalsIgnoreCase(validName)
+                )
+                if (exists) Left(ValidationError.alreadyExists("Label", validName))
+                else Right(())
+              }
+            } yield Some(validName)
+          case None => Right(None)
+        }
+        
+        nameValidation.map { validName =>
+          val updated = label.copy(
+            name = validName.getOrElse(label.name)
+          )
+          network.copy(relationshipLabels = network.relationshipLabels.updated(labelId, updated))
+        }
+    }
+
+  /**
+   * Archives a label. The label is hidden from selection lists but associations are preserved.
+   */
+  def archiveLabel(network: Network, labelId: Id[RelationshipLabel]): Either[ValidationError, Network] =
+    network.relationshipLabels.get(labelId) match {
+      case None => Left(ValidationError.notFound("Label", labelId.value.toString))
+      case Some(label) =>
+        val archived = label.copy(archived = true)
+        Right(network.copy(relationshipLabels = network.relationshipLabels.updated(labelId, archived)))
+    }
+
+  /**
+   * Unarchives a label, making it visible in selection lists again.
+   */
+  def unarchiveLabel(network: Network, labelId: Id[RelationshipLabel]): Either[ValidationError, Network] =
+    network.relationshipLabels.get(labelId) match {
+      case None => Left(ValidationError.notFound("Label", labelId.value.toString))
+      case Some(label) =>
+        val unarchived = label.copy(archived = false)
+        Right(network.copy(relationshipLabels = network.relationshipLabels.updated(labelId, unarchived)))
     }
 }

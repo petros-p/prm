@@ -142,14 +142,59 @@ object JsonCodecs {
   // --------------------------------------------------------------------------
 
   /**
-   * Person codec.
+   * Person codec with backward compatibility for defaultLocation -> location rename.
    */
-  given ReadWriter[Person] = macroRW[Person]
+  given ReadWriter[Person] = readwriter[ujson.Value].bimap[Person](
+    p => ujson.Obj(
+      "id" -> writeJs(p.id),
+      "name" -> ujson.Str(p.name),
+      "nickname" -> p.nickname.map(ujson.Str(_)).getOrElse(ujson.Null),
+      "howWeMet" -> p.howWeMet.map(ujson.Str(_)).getOrElse(ujson.Null),
+      "birthday" -> p.birthday.map(d => ujson.Str(d.toString)).getOrElse(ujson.Null),
+      "notes" -> p.notes.map(ujson.Str(_)).getOrElse(ujson.Null),
+      "location" -> p.location.map(ujson.Str(_)).getOrElse(ujson.Null),
+      "contactInfo" -> writeJs(p.contactInfo),
+      "isSelf" -> ujson.Bool(p.isSelf),
+      "archived" -> ujson.Bool(p.archived)
+    ),
+    json => {
+      val obj = json.obj
+      // Support both "location" and legacy "defaultLocation"
+      val location = obj.get("location").orElse(obj.get("defaultLocation"))
+        .flatMap(v => if (v.isNull) None else Some(v.str))
+      Person(
+        id = read[Id[Person]](obj("id")),
+        name = obj("name").str,
+        nickname = obj.get("nickname").flatMap(v => if (v.isNull) None else Some(v.str)),
+        howWeMet = obj.get("howWeMet").flatMap(v => if (v.isNull) None else Some(v.str)),
+        birthday = obj.get("birthday").flatMap(v => if (v.isNull) None else Some(java.time.LocalDate.parse(v.str))),
+        notes = obj.get("notes").flatMap(v => if (v.isNull) None else Some(v.str)),
+        location = location,
+        contactInfo = obj.get("contactInfo").map(v => read[List[ContactEntry]](v)).getOrElse(List.empty),
+        isSelf = obj.get("isSelf").map(_.bool).getOrElse(false),
+        archived = obj.get("archived").map(_.bool).getOrElse(false)
+      )
+    }
+  )
 
   /**
-   * RelationshipLabel codec.
+   * RelationshipLabel codec with backward compatibility for archived field.
    */
-  given ReadWriter[RelationshipLabel] = macroRW[RelationshipLabel]
+  given ReadWriter[RelationshipLabel] = readwriter[ujson.Value].bimap[RelationshipLabel](
+    l => ujson.Obj(
+      "id" -> writeJs(l.id),
+      "name" -> ujson.Str(l.name),
+      "archived" -> ujson.Bool(l.archived)
+    ),
+    json => {
+      val obj = json.obj
+      RelationshipLabel(
+        id = read[Id[RelationshipLabel]](obj("id")),
+        name = obj("name").str,
+        archived = obj.get("archived").map(_.bool).getOrElse(false)
+      )
+    }
+  )
 
   /**
    * Relationship codec.

@@ -31,6 +31,11 @@ class CircleCommands(ctx: CLIContext) {
       return
     }
 
+    // Description (before members)
+    print("Description (optional): ")
+    val description = StdIn.readLine().trim
+    val descOpt = if (description.isEmpty) None else Some(description)
+
     println("Add members (enter numbers separated by spaces, or press Enter to skip):")
     val people = NetworkQueries.activePeople(ctx.network)
     people.zipWithIndex.foreach { case (person, i) =>
@@ -48,7 +53,7 @@ class CircleCommands(ctx: CLIContext) {
         .toSet
     }
 
-    ctx.withSaveAndResult(NetworkOps.createCircle(ctx.network, name, memberIds = memberIds)) { circle =>
+    ctx.withSaveAndResult(NetworkOps.createCircle(ctx.network, name, description = descOpt, memberIds = memberIds)) { circle =>
       println(s"Created circle: ${circle.name} with ${memberIds.size} members")
     }
   }
@@ -80,6 +85,14 @@ class CircleCommands(ctx: CLIContext) {
         val nameInput = StdIn.readLine().trim
         if (nameInput.nonEmpty) {
           ctx.withSave(NetworkOps.updateCircle(ctx.network, circle.id, name = Some(nameInput))) {}
+        }
+
+        // Description (before members)
+        print(s"Description [${circle.description.getOrElse("")}] ('clear' to remove): ")
+        val descInput = StdIn.readLine().trim
+        if (descInput.nonEmpty) {
+          val newDesc = if (descInput.toLowerCase == "clear") None else Some(descInput)
+          ctx.withSave(NetworkOps.updateCircle(ctx.network, circle.id, description = Some(newDesc))) {}
         }
 
         val currentMembers = NetworkQueries.circleMembers(ctx.network, circle.id).map(_.id).toSet

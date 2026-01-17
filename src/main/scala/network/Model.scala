@@ -267,7 +267,7 @@ object Interaction {
  * @param howWeMet        Optional description of how you met
  * @param birthday        Optional birthday
  * @param notes           Optional free-form notes about this person
- * @param defaultLocation Default location for interactions (convenience for logging)
+ * @param location Location for interactions (convenience for logging)
  * @param contactInfo     List of contact entries (phone, email, address, custom)
  * @param isSelf          True if this person represents you (the network owner)
  * @param archived        True if this person is archived (hidden from main view)
@@ -279,7 +279,7 @@ case class Person(
   howWeMet: Option[String],
   birthday: Option[LocalDate],
   notes: Option[String],
-  defaultLocation: Option[String],
+  location: Option[String],
   contactInfo: List[ContactEntry],
   isSelf: Boolean,
   archived: Boolean
@@ -296,7 +296,7 @@ object Person {
     howWeMet: Option[String] = None,
     birthday: Option[LocalDate] = None,
     notes: Option[String] = None,
-    defaultLocation: Option[String] = None,
+    location: Option[String] = None,
     contactInfo: List[ContactEntry] = List.empty,
     isSelf: Boolean = false
   ): Person = Person(
@@ -306,7 +306,7 @@ object Person {
     howWeMet = howWeMet,
     birthday = birthday,
     notes = notes,
-    defaultLocation = defaultLocation,
+    location = location,
     contactInfo = contactInfo,
     isSelf = isSelf,
     archived = false
@@ -339,18 +339,21 @@ object Person {
  * Represents the nature of your connection to another person.
  * Labels describe what someone is to you: friend, family, coworker, etc.
  *
- * @param id    Unique identifier
- * @param name  The label text (e.g., "friend", "coworker", "mentor")
+ * @param id       Unique identifier
+ * @param name     The label text (e.g., "friend", "coworker", "mentor")
+ * @param archived True if this label is archived (hidden from selection lists)
  */
 case class RelationshipLabel(
   id: Id[RelationshipLabel],
-  name: String
+  name: String,
+  archived: Boolean
 )
 
 object RelationshipLabel {
   def create(name: String): RelationshipLabel = RelationshipLabel(
     id = Id.generate[RelationshipLabel],
-    name = name
+    name = name,
+    archived = false
   )
 
   /**

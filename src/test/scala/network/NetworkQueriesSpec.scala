@@ -16,7 +16,7 @@ class NetworkQueriesSpec extends AnyFunSuite with Matchers {
     val self = Person.createSelf("Petros")
     var network = Network.create(owner, self)
     
-    val (n1, alice) = getRight(NetworkOps.addPerson(network, "Alice", defaultLocation = Some("Coffee shop")))
+    val (n1, alice) = getRight(NetworkOps.addPerson(network, "Alice", location = Some("Coffee shop")))
     val (n2, bob) = getRight(NetworkOps.addPerson(n1, "Bob"))
     val (n3, carol) = getRight(NetworkOps.addPerson(n2, "Carol", nickname = Some("C")))
     network = n3

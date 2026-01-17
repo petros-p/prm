@@ -1,16 +1,23 @@
 package network
 
 import scala.io.StdIn
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 /**
  * CLI commands for managing people.
  */
 class PersonCommands(ctx: CLIContext) {
 
+  private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+
+  /**
+   * Lists all active (non-archived) people.
+   */
   def list(): Unit = {
     val people = NetworkQueries.activePeople(ctx.network)
     if (people.isEmpty) {
-      println("No people in your network yet. Use 'add <name>' to add someone.")
+      println("No people in your network yet. Use 'add-person' to add someone.")
       return
     }
 
@@ -26,10 +33,24 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Adds a new person with full interactive flow.
+   * User can press 's' at any prompt to save and exit.
+   * All fields except name are optional (press Enter to skip).
+   */
   def add(args: List[String]): Unit = {
+    println("Adding a new person (press Enter to skip optional fields, 's' to save and exit)")
+    println()
+
+    // Name (mandatory)
     val name = if (args.nonEmpty) args.mkString(" ") else {
-      print("Name: ")
-      StdIn.readLine().trim
+      print("Name (required): ")
+      val input = StdIn.readLine().trim
+      if (input.toLowerCase == "s" || input.isEmpty) {
+        if (input.isEmpty) println("Name is required.")
+        return
+      }
+      input
     }
 
     if (name.isEmpty) {
@@ -37,52 +58,128 @@ class PersonCommands(ctx: CLIContext) {
       return
     }
 
-    ctx.withSaveAndResult(NetworkOps.addPerson(ctx.network, name)) { person =>
-      println(s"Added ${person.name}")
+    // Create person first
+    val addResult = NetworkOps.addPerson(ctx.network, name)
+    val person = addResult match {
+      case Right((n, p)) =>
+        ctx.network = n
+        ctx.save()
+        println(s"Added ${p.name}")
+        p
+      case Left(e) =>
+        println(s"Error: ${e.message}")
+        return
+    }
 
-      print("How did you meet? (press Enter to skip) ")
-      val howWeMet = StdIn.readLine().trim
-      if (howWeMet.nonEmpty) {
-        ctx.withSave(NetworkOps.updatePerson(ctx.network, person.id, howWeMet = Some(Some(howWeMet)))) {}
-      }
+    // Helper to check for save-and-exit
+    def checkSaveExit(input: String): Boolean = input.toLowerCase == "s"
 
-      println("Labels (enter numbers separated by spaces, or press Enter to skip):")
-      val labels = ctx.network.relationshipLabels.values.toList.sortBy(_.name)
-      labels.zipWithIndex.foreach { case (label, i) =>
-        println(s"  ${i + 1}. ${label.name}")
-      }
-      print("Labels: ")
-      val labelInput = StdIn.readLine().trim
-      if (labelInput.nonEmpty) {
-        val indices = labelInput.split("\\s+").flatMap(s => scala.util.Try(s.toInt - 1).toOption)
-        val selectedLabels = indices.flatMap(i => labels.lift(i)).map(_.id).toSet
-        if (selectedLabels.nonEmpty) {
-          ctx.withSave(NetworkOps.setRelationship(ctx.network, person.id, selectedLabels)) {}
-        }
-      }
+    // Nickname
+    print("Nickname: ")
+    val nicknameInput = StdIn.readLine().trim
+    if (checkSaveExit(nicknameInput)) { println("Saved."); return }
+    if (nicknameInput.nonEmpty) {
+      updateField(person.id, nickname = Some(Some(nicknameInput)))
+    }
 
-      print("Reminder every how many days? (press Enter to skip) ")
-      val reminderInput = StdIn.readLine().trim
-      if (reminderInput.nonEmpty) {
-        scala.util.Try(reminderInput.toInt).toOption match {
-          case Some(days) if days > 0 =>
-            val rel = ctx.network.relationships.get(person.id)
-            if (rel.isDefined) {
-              ctx.withSave(NetworkOps.setReminder(ctx.network, person.id, Some(days))) {
-                println(s"Reminder set for every $days days")
-              }
-            } else {
-              ctx.withSave(NetworkOps.setRelationship(ctx.network, person.id, reminderDays = Some(days))) {
-                println(s"Reminder set for every $days days")
-              }
-            }
-          case _ => 
-            println("Invalid number, skipping reminder.")
-        }
+    // Birthday
+    print("Birthday (YYYY-MM-DD): ")
+    val birthdayInput = StdIn.readLine().trim
+    if (checkSaveExit(birthdayInput)) { println("Saved."); return }
+    if (birthdayInput.nonEmpty) {
+      parseDate(birthdayInput) match {
+        case Some(date) => updateField(person.id, birthday = Some(Some(date)))
+        case None => println("Invalid date format, skipping.")
       }
     }
+
+    // How we met
+    print("How did you meet: ")
+    val howWeMetInput = StdIn.readLine().trim
+    if (checkSaveExit(howWeMetInput)) { println("Saved."); return }
+    if (howWeMetInput.nonEmpty) {
+      updateField(person.id, howWeMet = Some(Some(howWeMetInput)))
+    }
+
+    // Notes
+    print("Notes: ")
+    val notesInput = StdIn.readLine().trim
+    if (checkSaveExit(notesInput)) { println("Saved."); return }
+    if (notesInput.nonEmpty) {
+      updateField(person.id, notes = Some(Some(notesInput)))
+    }
+
+    // Location
+    print("Location: ")
+    val locationInput = StdIn.readLine().trim
+    if (checkSaveExit(locationInput)) { println("Saved."); return }
+    if (locationInput.nonEmpty) {
+      updateField(person.id, location = Some(Some(locationInput)))
+    }
+
+    // Labels
+    println()
+    print("Add labels? (y/n): ")
+    val labelsChoice = StdIn.readLine().trim.toLowerCase
+    if (labelsChoice == "s") { println("Saved."); return }
+    if (labelsChoice == "y") {
+      selectLabels(person.id)
+    }
+
+    // Circles
+    println()
+    print("Add to circles? (y/n): ")
+    val circlesChoice = StdIn.readLine().trim.toLowerCase
+    if (circlesChoice == "s") { println("Saved."); return }
+    if (circlesChoice == "y") {
+      selectCircles(person.id)
+    }
+
+    // Phones
+    println()
+    print("Add phone numbers? (y/n): ")
+    val phonesChoice = StdIn.readLine().trim.toLowerCase
+    if (phonesChoice == "s") { println("Saved."); return }
+    if (phonesChoice == "y") {
+      addPhones(person.id)
+    }
+
+    // Emails
+    println()
+    print("Add email addresses? (y/n): ")
+    val emailsChoice = StdIn.readLine().trim.toLowerCase
+    if (emailsChoice == "s") { println("Saved."); return }
+    if (emailsChoice == "y") {
+      addEmails(person.id)
+    }
+
+    // Reminder
+    println()
+    print("Set reminder? (y/n): ")
+    val reminderChoice = StdIn.readLine().trim.toLowerCase
+    if (reminderChoice == "s") { println("Saved."); return }
+    if (reminderChoice == "y") {
+      setReminderFor(person.id)
+    }
+
+    // Log interaction
+    println()
+    print("Log an interaction now? (y/n): ")
+    val interactionChoice = StdIn.readLine().trim.toLowerCase
+    if (interactionChoice == "s") { println("Saved."); return }
+    if (interactionChoice == "y") {
+      ctx.network.people.get(person.id).foreach { p =>
+        new InteractionCommands(ctx).logForPerson(p)
+      }
+    }
+
+    println()
+    println(s"Finished adding ${name}.")
   }
 
+  /**
+   * Shows details for a specific person.
+   */
   def show(args: List[String]): Unit = {
     ctx.findPerson(args) match {
       case Some(person) =>
@@ -92,7 +189,7 @@ class PersonCommands(ctx: CLIContext) {
         println(s"Birthday: ${person.birthday.map(_.toString).getOrElse("(none)")}")
         println(s"How we met: ${person.howWeMet.getOrElse("(none)")}")
         println(s"Notes: ${person.notes.getOrElse("(none)")}")
-        println(s"Default location: ${person.defaultLocation.getOrElse("(none)")}")
+        println(s"Location: ${person.location.getOrElse("(none)")}")
 
         val labels = NetworkQueries.labelsFor(ctx.network, person.id)
         println(s"Labels: ${if (labels.isEmpty) "(none)" else labels.map(_.name).toList.sorted.mkString(", ")}")
@@ -125,6 +222,514 @@ class PersonCommands(ctx: CLIContext) {
     }
   }
 
+  /**
+   * Edit menu for a person - shows all editable fields.
+   */
+  def edit(args: List[String]): Unit = {
+    ctx.findPerson(args) match {
+      case Some(person) =>
+        println(s"Editing ${person.name}")
+        println()
+        println("What would you like to edit?")
+        println("  1. Name")
+        println("  2. Nickname")
+        println("  3. Birthday")
+        println("  4. How we met")
+        println("  5. Notes")
+        println("  6. Location")
+        println("  7. Labels")
+        println("  8. Circles")
+        println("  9. Phone numbers")
+        println(" 10. Email addresses")
+        println()
+        print("Choice (1-10, or Enter to cancel): ")
+        
+        val choice = StdIn.readLine().trim
+        choice match {
+          case "1" => editNameCmd(person)
+          case "2" => editNicknameCmd(person)
+          case "3" => editBirthdayCmd(person)
+          case "4" => editHowWeMetCmd(person)
+          case "5" => editNotesCmd(person)
+          case "6" => editLocationCmd(person)
+          case "7" => editLabelsCmd(person)
+          case "8" => editCirclesCmd(person)
+          case "9" => editPhonesCmd(person)
+          case "10" => editEmailsCmd(person)
+          case "" => println("Cancelled.")
+          case _ => println("Invalid choice.")
+        }
+
+      case None =>
+        if (args.isEmpty) println("Usage: edit-person <name>")
+    }
+  }
+
+  // ============================================================================
+  // GRANULAR EDIT COMMANDS
+  // ============================================================================
+
+  def editName(args: List[String]): Unit = {
+    ctx.findPerson(args) match {
+      case Some(person) => editNameCmd(person)
+      case None => if (args.isEmpty) println("Usage: edit-name <name>")
+    }
+  }
+
+  def editNickname(args: List[String]): Unit = {
+    ctx.findPerson(args) match {
+      case Some(person) => editNicknameCmd(person)
+      case None => if (args.isEmpty) println("Usage: edit-nickname <name>")
+    }
+  }
+
+  def editBirthday(args: List[String]): Unit = {
+    ctx.findPerson(args) match {
+      case Some(person) => editBirthdayCmd(person)
+      case None => if (args.isEmpty) println("Usage: edit-birthday <name>")
+    }
+  }
+
+  def editHowWeMet(args: List[String]): Unit = {
+    ctx.findPerson(args) match {
+      case Some(person) => editHowWeMetCmd(person)
+      case None => if (args.isEmpty) println("Usage: edit-how-we-met <name>")
+    }
+  }
+
+  def editNotes(args: List[String]): Unit = {
+    ctx.findPerson(args) match {
+      case Some(person) => editNotesCmd(person)
+      case None => if (args.isEmpty) println("Usage: edit-notes <name>")
+    }
+  }
+
+  def editLocation(args: List[String]): Unit = {
+    ctx.findPerson(args) match {
+      case Some(person) => editLocationCmd(person)
+      case None => if (args.isEmpty) println("Usage: edit-location <name>")
+    }
+  }
+
+  def editLabels(args: List[String]): Unit = {
+    ctx.findPerson(args) match {
+      case Some(person) => editLabelsCmd(person)
+      case None => if (args.isEmpty) println("Usage: edit-labels <name>")
+    }
+  }
+
+  def editCircles(args: List[String]): Unit = {
+    ctx.findPerson(args) match {
+      case Some(person) => editCirclesCmd(person)
+      case None => if (args.isEmpty) println("Usage: edit-circles <name>")
+    }
+  }
+
+  def editPhone(args: List[String]): Unit = {
+    ctx.findPerson(args) match {
+      case Some(person) => editPhonesCmd(person)
+      case None => if (args.isEmpty) println("Usage: edit-phone <name>")
+    }
+  }
+
+  def editEmail(args: List[String]): Unit = {
+    ctx.findPerson(args) match {
+      case Some(person) => editEmailsCmd(person)
+      case None => if (args.isEmpty) println("Usage: edit-email <name>")
+    }
+  }
+
+  // ============================================================================
+  // INTERNAL EDIT IMPLEMENTATIONS
+  // ============================================================================
+
+  private def editNameCmd(person: Person): Unit = {
+    print(s"Name [${person.name}]: ")
+    val input = StdIn.readLine().trim
+    if (input.nonEmpty) {
+      ctx.withSave(NetworkOps.updatePerson(ctx.network, person.id, name = Some(input))) {
+        println(s"Updated name to: $input")
+      }
+    }
+  }
+
+  private def editNicknameCmd(person: Person): Unit = {
+    print(s"Nickname [${person.nickname.getOrElse("")}] (enter 'clear' to remove): ")
+    val input = StdIn.readLine().trim
+    if (input.nonEmpty) {
+      val newValue = if (input.toLowerCase == "clear") None else Some(input)
+      ctx.withSave(NetworkOps.updatePerson(ctx.network, person.id, nickname = Some(newValue))) {
+        newValue match {
+          case Some(v) => println(s"Updated nickname to: $v")
+          case None => println("Cleared nickname.")
+        }
+      }
+    }
+  }
+
+  private def editBirthdayCmd(person: Person): Unit = {
+    print(s"Birthday [${person.birthday.map(_.toString).getOrElse("")}] (YYYY-MM-DD, 'clear' to remove): ")
+    val input = StdIn.readLine().trim
+    if (input.nonEmpty) {
+      if (input.toLowerCase == "clear") {
+        ctx.withSave(NetworkOps.updatePerson(ctx.network, person.id, birthday = Some(None))) {
+          println("Cleared birthday.")
+        }
+      } else {
+        parseDate(input) match {
+          case Some(date) =>
+            ctx.withSave(NetworkOps.updatePerson(ctx.network, person.id, birthday = Some(Some(date)))) {
+              println(s"Updated birthday to: $date")
+            }
+          case None => println("Invalid date format.")
+        }
+      }
+    }
+  }
+
+  private def editHowWeMetCmd(person: Person): Unit = {
+    print(s"How we met [${person.howWeMet.getOrElse("")}] ('clear' to remove): ")
+    val input = StdIn.readLine().trim
+    if (input.nonEmpty) {
+      val newValue = if (input.toLowerCase == "clear") None else Some(input)
+      ctx.withSave(NetworkOps.updatePerson(ctx.network, person.id, howWeMet = Some(newValue))) {
+        newValue match {
+          case Some(v) => println(s"Updated: $v")
+          case None => println("Cleared.")
+        }
+      }
+    }
+  }
+
+  private def editNotesCmd(person: Person): Unit = {
+    print(s"Notes [${person.notes.getOrElse("")}] ('clear' to remove): ")
+    val input = StdIn.readLine().trim
+    if (input.nonEmpty) {
+      val newValue = if (input.toLowerCase == "clear") None else Some(input)
+      ctx.withSave(NetworkOps.updatePerson(ctx.network, person.id, notes = Some(newValue))) {
+        newValue match {
+          case Some(v) => println(s"Updated notes.")
+          case None => println("Cleared notes.")
+        }
+      }
+    }
+  }
+
+  private def editLocationCmd(person: Person): Unit = {
+    print(s"Location [${person.location.getOrElse("")}] ('clear' to remove): ")
+    val input = StdIn.readLine().trim
+    if (input.nonEmpty) {
+      val newValue = if (input.toLowerCase == "clear") None else Some(input)
+      ctx.withSave(NetworkOps.updatePerson(ctx.network, person.id, location = Some(newValue))) {
+        newValue match {
+          case Some(v) => println(s"Updated location to: $v")
+          case None => println("Cleared location.")
+        }
+      }
+    }
+  }
+
+  private def editLabelsCmd(person: Person): Unit = {
+    selectLabels(person.id)
+  }
+
+  private def editCirclesCmd(person: Person): Unit = {
+    selectCircles(person.id)
+  }
+
+  private def editPhonesCmd(person: Person): Unit = {
+    val phones = person.contactInfo.filter(_.contactType == ContactType.Phone)
+    println()
+    println("Current phones:")
+    if (phones.isEmpty) {
+      println("  (none)")
+    } else {
+      phones.zipWithIndex.foreach { case (entry, i) =>
+        val label = entry.label.map(l => s" ($l)").getOrElse("")
+        val value = entry.value match {
+          case ContactValue.StringValue(v) => v
+          case _ => ""
+        }
+        println(s"  ${i + 1}. $value$label")
+      }
+    }
+    println()
+    println("Options: 'add' to add, number to remove, Enter to finish")
+    
+    @scala.annotation.tailrec
+    def editLoop(): Unit = {
+      print("Action: ")
+      val input = StdIn.readLine().trim.toLowerCase
+      input match {
+        case "" => // done
+        case "add" =>
+          print("Phone number: ")
+          val number = StdIn.readLine().trim
+          if (number.nonEmpty) {
+            print("Label (optional): ")
+            val label = StdIn.readLine().trim
+            val labelOpt = if (label.isEmpty) None else Some(label)
+            ctx.withSave(NetworkOps.addPhone(ctx.network, person.id, number, labelOpt)) {
+              println(s"Added: $number")
+            }
+          }
+          editLoop()
+        case n if n.forall(_.isDigit) =>
+          val idx = n.toInt - 1
+          val currentPhones = ctx.network.people.get(person.id).map(_.contactInfo.filter(_.contactType == ContactType.Phone)).getOrElse(List.empty)
+          currentPhones.lift(idx) match {
+            case Some(entry) =>
+              ctx.withSave(NetworkOps.removeContactEntry(ctx.network, person.id, entry.id)) {
+                println("Removed.")
+              }
+            case None => println("Invalid number.")
+          }
+          editLoop()
+        case _ =>
+          println("Invalid input.")
+          editLoop()
+      }
+    }
+    editLoop()
+  }
+
+  private def editEmailsCmd(person: Person): Unit = {
+    val emails = person.contactInfo.filter(_.contactType == ContactType.Email)
+    println()
+    println("Current emails:")
+    if (emails.isEmpty) {
+      println("  (none)")
+    } else {
+      emails.zipWithIndex.foreach { case (entry, i) =>
+        val label = entry.label.map(l => s" ($l)").getOrElse("")
+        val value = entry.value match {
+          case ContactValue.StringValue(v) => v
+          case _ => ""
+        }
+        println(s"  ${i + 1}. $value$label")
+      }
+    }
+    println()
+    println("Options: 'add' to add, number to remove, Enter to finish")
+    
+    @scala.annotation.tailrec
+    def editLoop(): Unit = {
+      print("Action: ")
+      val input = StdIn.readLine().trim.toLowerCase
+      input match {
+        case "" => // done
+        case "add" =>
+          print("Email address: ")
+          val email = StdIn.readLine().trim
+          if (email.nonEmpty) {
+            print("Label (optional): ")
+            val label = StdIn.readLine().trim
+            val labelOpt = if (label.isEmpty) None else Some(label)
+            ctx.withSave(NetworkOps.addEmail(ctx.network, person.id, email, labelOpt)) {
+              println(s"Added: $email")
+            }
+          }
+          editLoop()
+        case n if n.forall(_.isDigit) =>
+          val idx = n.toInt - 1
+          val currentEmails = ctx.network.people.get(person.id).map(_.contactInfo.filter(_.contactType == ContactType.Email)).getOrElse(List.empty)
+          currentEmails.lift(idx) match {
+            case Some(entry) =>
+              ctx.withSave(NetworkOps.removeContactEntry(ctx.network, person.id, entry.id)) {
+                println("Removed.")
+              }
+            case None => println("Invalid number.")
+          }
+          editLoop()
+        case _ =>
+          println("Invalid input.")
+          editLoop()
+      }
+    }
+    editLoop()
+  }
+
+  // ============================================================================
+  // HELPER METHODS
+  // ============================================================================
+
+  private def updateField(
+    personId: Id[Person],
+    name: Option[String] = None,
+    nickname: Option[Option[String]] = None,
+    howWeMet: Option[Option[String]] = None,
+    birthday: Option[Option[LocalDate]] = None,
+    notes: Option[Option[String]] = None,
+    location: Option[Option[String]] = None
+  ): Unit = {
+    NetworkOps.updatePerson(ctx.network, personId, name, nickname, howWeMet, birthday, notes, location) match {
+      case Right(n) =>
+        ctx.network = n
+        ctx.save()
+      case Left(e) =>
+        println(s"Error: ${e.message}")
+    }
+  }
+
+  private def parseDate(input: String): Option[LocalDate] = {
+    try Some(LocalDate.parse(input, dateFormatter))
+    catch case _: Exception => None
+  }
+
+  private def selectLabels(personId: Id[Person]): Unit = {
+    val allLabels = NetworkQueries.activeLabels(ctx.network)
+    if (allLabels.isEmpty) {
+      println("No labels available.")
+      return
+    }
+
+    val currentLabels = NetworkQueries.labelsFor(ctx.network, personId).map(_.id)
+
+    println("Select labels (enter numbers to toggle, Enter when done):")
+
+    @scala.annotation.tailrec
+    def toggleLabels(selectedIds: Set[Id[RelationshipLabel]]): Set[Id[RelationshipLabel]] = {
+      allLabels.zipWithIndex.foreach { case (label, i) =>
+        val marker = if (selectedIds.contains(label.id)) "[x]" else "[ ]"
+        println(s"  ${i + 1}. $marker ${label.name}")
+      }
+      print("Toggle (or Enter to finish): ")
+      val input = StdIn.readLine().trim
+
+      if (input.isEmpty) {
+        selectedIds
+      } else {
+        val updatedIds = input.split("\\s+").foldLeft(selectedIds) { (ids, s) =>
+          scala.util.Try(s.toInt - 1).toOption.flatMap(i => allLabels.lift(i)) match {
+            case Some(label) =>
+              if (ids.contains(label.id)) ids - label.id else ids + label.id
+            case None => ids
+          }
+        }
+        toggleLabels(updatedIds)
+      }
+    }
+
+    val finalSelectedIds = toggleLabels(currentLabels)
+    ctx.withSave(NetworkOps.setLabels(ctx.network, personId, finalSelectedIds)) {
+      val names = finalSelectedIds.flatMap(ctx.network.relationshipLabels.get).map(_.name).toList.sorted
+      println(s"Labels: ${if (names.isEmpty) "(none)" else names.mkString(", ")}")
+    }
+  }
+
+  private def selectCircles(personId: Id[Person]): Unit = {
+    val allCircles = NetworkQueries.activeCircles(ctx.network)
+    if (allCircles.isEmpty) {
+      println("No circles available.")
+      return
+    }
+
+    val currentCircles = NetworkQueries.circlesFor(ctx.network, personId).map(_.id).toSet
+
+    println("Select circles (enter numbers to toggle, Enter when done):")
+
+    @scala.annotation.tailrec
+    def toggleCircles(selectedIds: Set[Id[Circle]]): Set[Id[Circle]] = {
+      allCircles.zipWithIndex.foreach { case (circle, i) =>
+        val marker = if (selectedIds.contains(circle.id)) "[x]" else "[ ]"
+        println(s"  ${i + 1}. $marker ${circle.name}")
+      }
+      print("Toggle (or Enter to finish): ")
+      val input = StdIn.readLine().trim
+
+      if (input.isEmpty) {
+        selectedIds
+      } else {
+        val updatedIds = input.split("\\s+").foldLeft(selectedIds) { (ids, s) =>
+          scala.util.Try(s.toInt - 1).toOption.flatMap(i => allCircles.lift(i)) match {
+            case Some(circle) =>
+              if (ids.contains(circle.id)) ids - circle.id else ids + circle.id
+            case None => ids
+          }
+        }
+        toggleCircles(updatedIds)
+      }
+    }
+
+    val finalSelectedIds = toggleCircles(currentCircles)
+
+    // Update circles: add to newly selected, remove from unselected
+    val toAdd = finalSelectedIds -- currentCircles
+    val toRemove = currentCircles -- finalSelectedIds
+
+    toAdd.foreach { circleId =>
+      NetworkOps.addToCircle(ctx.network, circleId, Set(personId)) match {
+        case Right(n) => ctx.network = n
+        case Left(e) => println(s"Error: ${e.message}")
+      }
+    }
+
+    toRemove.foreach { circleId =>
+      NetworkOps.removeFromCircle(ctx.network, circleId, Set(personId)) match {
+        case Right(n) => ctx.network = n
+        case Left(e) => println(s"Error: ${e.message}")
+      }
+    }
+
+    ctx.save()
+    val names = finalSelectedIds.flatMap(ctx.network.circles.get).map(_.name).toList.sorted
+    println(s"Circles: ${if (names.isEmpty) "(none)" else names.mkString(", ")}")
+  }
+
+  private def addPhones(personId: Id[Person]): Unit = {
+    @scala.annotation.tailrec
+    def addLoop(): Unit = {
+      print("Phone number (or Enter to finish): ")
+      val number = StdIn.readLine().trim
+      if (number.nonEmpty) {
+        print("Label (optional): ")
+        val label = StdIn.readLine().trim
+        val labelOpt = if (label.isEmpty) None else Some(label)
+        ctx.withSave(NetworkOps.addPhone(ctx.network, personId, number, labelOpt)) {
+          println(s"Added: $number")
+        }
+        addLoop()
+      }
+    }
+    addLoop()
+  }
+
+  private def addEmails(personId: Id[Person]): Unit = {
+    @scala.annotation.tailrec
+    def addLoop(): Unit = {
+      print("Email address (or Enter to finish): ")
+      val email = StdIn.readLine().trim
+      if (email.nonEmpty) {
+        print("Label (optional): ")
+        val label = StdIn.readLine().trim
+        val labelOpt = if (label.isEmpty) None else Some(label)
+        ctx.withSave(NetworkOps.addEmail(ctx.network, personId, email, labelOpt)) {
+          println(s"Added: $email")
+        }
+        addLoop()
+      }
+    }
+    addLoop()
+  }
+
+  private def setReminderFor(personId: Id[Person]): Unit = {
+    print("Remind every how many days: ")
+    val input = StdIn.readLine().trim
+    scala.util.Try(input.toInt).toOption match {
+      case Some(days) if days > 0 =>
+        val updated = if (!ctx.network.relationships.contains(personId)) {
+          NetworkOps.setRelationship(ctx.network, personId, reminderDays = Some(days))
+        } else {
+          NetworkOps.setReminder(ctx.network, personId, Some(days))
+        }
+        ctx.withSave(updated) {
+          println(s"Reminder set for every $days days")
+        }
+      case _ =>
+        println("Invalid number, skipping reminder.")
+    }
+  }
+
   private def formatContacts(contacts: List[ContactEntry], contactType: ContactType): String = {
     val filtered = contacts.filter(_.contactType == contactType)
     if (filtered.isEmpty) "(none)"
@@ -138,119 +743,69 @@ class PersonCommands(ctx: CLIContext) {
     }.mkString(", ")
   }
 
-  def edit(args: List[String]): Unit = {
-    ctx.findPerson(args) match {
-      case Some(person) =>
-        println(s"Editing ${person.name} (press Enter to keep current value)")
-        println()
+  // ============================================================================
+  // FIND COMMAND (searches people, circles, labels)
+  // ============================================================================
 
-        print(s"Name [${person.name}]: ")
-        val nameInput = StdIn.readLine().trim
-        val newName = if (nameInput.isEmpty) None else Some(nameInput)
-
-        print(s"Nickname [${person.nickname.getOrElse("")}]: ")
-        val nicknameInput = StdIn.readLine().trim
-        val newNickname = if (nicknameInput.isEmpty) None else Some(Some(nicknameInput))
-
-        print(s"How we met [${person.howWeMet.getOrElse("")}]: ")
-        val howWeMetInput = StdIn.readLine().trim
-        val newHowWeMet = if (howWeMetInput.isEmpty) None else Some(Some(howWeMetInput))
-
-        print(s"Notes [${person.notes.getOrElse("")}]: ")
-        val notesInput = StdIn.readLine().trim
-        val newNotes = if (notesInput.isEmpty) None else Some(Some(notesInput))
-
-        print(s"Default location [${person.defaultLocation.getOrElse("")}]: ")
-        val locInput = StdIn.readLine().trim
-        val newLoc = if (locInput.isEmpty) None else Some(Some(locInput))
-
-        NetworkOps.updatePerson(
-          ctx.network, person.id,
-          name = newName,
-          nickname = newNickname,
-          howWeMet = newHowWeMet,
-          notes = newNotes,
-          defaultLocation = newLoc
-        ) match {
-          case Right(n) =>
-            ctx.network = n
-            ctx.save()
-          case Left(e) =>
-            println(s"Error: ${e.message}")
-            return
-        }
-
-        // Labels section
-        println()
-        val currentLabels = NetworkQueries.labelsFor(ctx.network, person.id)
-        val allLabels = ctx.network.relationshipLabels.values.toList.sortBy(_.name)
-
-        println("Labels (enter numbers to toggle, press Enter when done):")
-        println(s"Current: ${if (currentLabels.isEmpty) "(none)" else currentLabels.map(_.name).toList.sorted.mkString(", ")}")
-        println()
-
-        /**
-         * Recursively prompts user to toggle labels until they press Enter.
-         * Returns the final set of selected label IDs.
-         */
-        @scala.annotation.tailrec
-        def toggleLabels(selectedIds: Set[Id[RelationshipLabel]]): Set[Id[RelationshipLabel]] = {
-          allLabels.zipWithIndex.foreach { case (label, i) =>
-            val marker = if (selectedIds.contains(label.id)) "[x]" else "[ ]"
-            println(s"  ${i + 1}. $marker ${label.name}")
-          }
-          print("Toggle (or Enter to finish): ")
-          val input = StdIn.readLine().trim
-
-          if (input.isEmpty) {
-            selectedIds
-          } else {
-            val updatedIds = input.split("\\s+").foldLeft(selectedIds) { (ids, s) =>
-              scala.util.Try(s.toInt - 1).toOption.flatMap(i => allLabels.lift(i)) match {
-                case Some(label) =>
-                  if (ids.contains(label.id)) ids - label.id else ids + label.id
-                case None => 
-                  ids
-              }
-            }
-            toggleLabels(updatedIds)
-          }
-        }
-
-        val finalSelectedIds = toggleLabels(currentLabels.map(_.id))
-
-        ctx.withSave(NetworkOps.setLabels(ctx.network, person.id, finalSelectedIds)) {
-          val finalLabels = finalSelectedIds.flatMap(ctx.network.relationshipLabels.get).map(_.name).toList.sorted
-          println()
-          println(s"Updated ${newName.getOrElse(person.name)}")
-          println(s"Labels: ${if (finalLabels.isEmpty) "(none)" else finalLabels.mkString(", ")}")
-        }
-
-      case None =>
-        if (args.isEmpty) println("Usage: edit <name>")
-    }
-  }
-
-  def search(args: List[String]): Unit = {
+  def find(args: List[String]): Unit = {
     if (args.isEmpty) {
-      println("Usage: search <query>")
+      println("Usage: find <query>")
       return
     }
 
     val query = args.mkString(" ")
-    val results = NetworkQueries.findByName(ctx.network, query)
+    
+    // Search people
+    val people = NetworkQueries.findByName(ctx.network, query)
+    
+    // Search circles
+    val circles = ctx.network.circles.values
+      .filter(_.name.toLowerCase.contains(query.toLowerCase))
+      .toList.sortBy(_.name)
+    
+    // Search labels
+    val labels = NetworkQueries.findLabelByName(ctx.network, query)
 
-    if (results.isEmpty) {
-      println(s"No people found matching '$query'")
+    val totalResults = people.size + circles.size + labels.size
+
+    if (totalResults == 0) {
+      println(s"No results found for '$query'")
     } else {
-      println(s"Found ${results.size} match(es):")
-      for (person <- results) {
-        val archived = if (person.archived) " (archived)" else ""
-        val self = if (person.isSelf) " (you)" else ""
-        println(s"  ${person.name}$self$archived")
+      println(s"Found $totalResults result(s) for '$query':")
+      println()
+
+      if (people.nonEmpty) {
+        println("People:")
+        for (person <- people) {
+          val archived = if (person.archived) " (archived)" else ""
+          val self = if (person.isSelf) " (you)" else ""
+          println(s"  ${person.name}$self$archived")
+        }
+        println()
+      }
+
+      if (circles.nonEmpty) {
+        println("Circles:")
+        for (circle <- circles) {
+          val archived = if (circle.archived) " (archived)" else ""
+          println(s"  ${circle.name}$archived")
+        }
+        println()
+      }
+
+      if (labels.nonEmpty) {
+        println("Labels:")
+        for (label <- labels) {
+          val archived = if (label.archived) " (archived)" else ""
+          println(s"  ${label.name}$archived")
+        }
       }
     }
   }
+
+  // ============================================================================
+  // ARCHIVE COMMANDS
+  // ============================================================================
 
   def archive(args: List[String]): Unit = {
     ctx.findPerson(args) match {
@@ -259,14 +814,14 @@ class PersonCommands(ctx: CLIContext) {
           println(s"Archived ${person.name}")
         }
       case None =>
-        if (args.isEmpty) println("Usage: archive <name>")
+        if (args.isEmpty) println("Usage: archive-person <name>")
     }
   }
 
   def unarchive(args: List[String]): Unit = {
     val query = args.mkString(" ")
     if (query.isEmpty) {
-      println("Usage: unarchive <name>")
+      println("Usage: unarchive-person <name>")
       return
     }
 

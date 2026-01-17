@@ -179,7 +179,7 @@ class ModelSpec extends AnyFunSuite with Matchers {
     person.howWeMet shouldBe None
     person.birthday shouldBe None
     person.notes shouldBe None
-    person.defaultLocation shouldBe None
+    person.location shouldBe None
     person.contactInfo shouldBe empty
     person.isSelf shouldBe false
     person.archived shouldBe false
@@ -194,7 +194,7 @@ class ModelSpec extends AnyFunSuite with Matchers {
       howWeMet = Some("College roommate"),
       birthday = Some(birthday),
       notes = Some("Loves hiking"),
-      defaultLocation = Some("Coffee shop downtown"),
+      location = Some("Coffee shop downtown"),
       contactInfo = List(phone)
     )
     
@@ -203,7 +203,7 @@ class ModelSpec extends AnyFunSuite with Matchers {
     person.howWeMet shouldBe Some("College roommate")
     person.birthday shouldBe Some(birthday)
     person.notes shouldBe Some("Loves hiking")
-    person.defaultLocation shouldBe Some("Coffee shop downtown")
+    person.location shouldBe Some("Coffee shop downtown")
     person.contactInfo should have size 1
     person.isSelf shouldBe false
   }
@@ -233,6 +233,7 @@ class ModelSpec extends AnyFunSuite with Matchers {
     
     label.name shouldBe "farming buddy"
     label.id.value shouldBe a[java.util.UUID]
+    label.archived shouldBe false
   }
 
   test("RelationshipLabel.defaults contains expected labels") {
@@ -243,6 +244,9 @@ class ModelSpec extends AnyFunSuite with Matchers {
     defaultNames should contain("family")
     defaultNames should contain("coworker")
     defaultNames should contain("mentor")
+    
+    // All defaults should be non-archived
+    RelationshipLabel.defaults.foreach(_.archived shouldBe false)
   }
 
   // ==========================================================================

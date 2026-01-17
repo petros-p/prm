@@ -193,6 +193,47 @@ object NetworkQueries {
       .map(_.labels.flatMap(network.relationshipLabels.get))
       .getOrElse(Set.empty)
 
+  /**
+   * Gets all active (non-archived) labels.
+   */
+  def activeLabels(network: Network): List[RelationshipLabel] =
+    network.relationshipLabels.values
+      .filter(!_.archived)
+      .toList
+      .sortBy(_.name)
+
+  /**
+   * Gets all archived labels.
+   */
+  def archivedLabels(network: Network): List[RelationshipLabel] =
+    network.relationshipLabels.values
+      .filter(_.archived)
+      .toList
+      .sortBy(_.name)
+
+  /**
+   * Finds a label by name (case-insensitive, partial match).
+   * Searches both active and archived labels.
+   */
+  def findLabelByName(network: Network, query: String): List[RelationshipLabel] = {
+    val lowerQuery = query.toLowerCase.trim
+    network.relationshipLabels.values
+      .filter(_.name.toLowerCase.contains(lowerQuery))
+      .toList
+      .sortBy(_.name)
+  }
+
+  /**
+   * Finds an active label by name (case-insensitive, partial match).
+   */
+  def findActiveLabelByName(network: Network, query: String): List[RelationshipLabel] = {
+    val lowerQuery = query.toLowerCase.trim
+    network.relationshipLabels.values
+      .filter(l => !l.archived && l.name.toLowerCase.contains(lowerQuery))
+      .toList
+      .sortBy(_.name)
+  }
+
   // --------------------------------------------------------------------------
   // CIRCLE QUERIES
   // --------------------------------------------------------------------------

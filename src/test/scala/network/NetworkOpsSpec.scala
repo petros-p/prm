@@ -162,7 +162,45 @@ class NetworkOpsSpec extends AnyFunSuite with Matchers {
     result.isRight shouldBe true
     val (updated, label) = getRight(result)
     label.name shouldBe "farming partner"
+    label.archived shouldBe false
     updated.relationshipLabels should have size (initialCount + 1)
+  }
+
+  test("updateLabel changes label name") {
+    val network = createTestNetwork()
+    val friendLabel = network.relationshipLabels.values.find(_.name == "friend").get
+    
+    val result = NetworkOps.updateLabel(network, friendLabel.id, name = Some("close friend"))
+    
+    result.isRight shouldBe true
+    val updated = getRight(result)
+    updated.relationshipLabels(friendLabel.id).name shouldBe "close friend"
+  }
+
+  test("archiveLabel sets archived to true") {
+    val network = createTestNetwork()
+    val friendLabel = network.relationshipLabels.values.find(_.name == "friend").get
+    
+    val result = NetworkOps.archiveLabel(network, friendLabel.id)
+    
+    result.isRight shouldBe true
+    val updated = getRight(result)
+    updated.relationshipLabels(friendLabel.id).archived shouldBe true
+  }
+
+  test("unarchiveLabel sets archived to false") {
+    val network = createTestNetwork()
+    val friendLabel = network.relationshipLabels.values.find(_.name == "friend").get
+    
+    // First archive
+    val archived = getRight(NetworkOps.archiveLabel(network, friendLabel.id))
+    archived.relationshipLabels(friendLabel.id).archived shouldBe true
+    
+    // Then unarchive
+    val result = NetworkOps.unarchiveLabel(archived, friendLabel.id)
+    result.isRight shouldBe true
+    val updated = getRight(result)
+    updated.relationshipLabels(friendLabel.id).archived shouldBe false
   }
 
   test("setRelationship works for self") {
