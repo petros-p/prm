@@ -5,8 +5,8 @@ This is a working prototype for proof of concept.
 
 ## Setup
 
-1. Install Java 17+ ([download](https://adoptium.net/))
-2. Install sbt ([download](https://www.scala-sbt.org/download.html))
+1. Install Java 17+ ([download](https://adoptium.net/temurin/releases?version=17&os=any&arch=any))
+2. Install sbt ([download](https://www.scala-sbt.org/download/))
 3. Clone and run:
 
 ```bash
