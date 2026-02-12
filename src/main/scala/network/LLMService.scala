@@ -9,7 +9,7 @@ import ujson._
  * Parsed interaction fields extracted by the LLM from natural language input.
  */
 case class ParsedInteraction(
-  personName: String,
+  personNames: List[String],
   medium: String,
   location: String,
   theirLocation: Option[String],
@@ -25,7 +25,7 @@ case class ParsedInteraction(
 object LLMService {
 
   private val apiUrl = "https://openrouter.ai/api/v1/chat/completions"
-  private val model = "meta-llama/llama-3.3-70b-instruct:free"
+  private val model = "openai/gpt-4o-mini"
 
   /**
    * Reads the OpenRouter API key from the OPENROUTER_API_KEY environment variable.
@@ -48,19 +48,21 @@ object LLMService {
    */
   def parseInteraction(input: String, knownNames: List[String], apiKey: String): Either[String, ParsedInteraction] = {
     val namesStr = knownNames.mkString(", ")
+    val today = java.time.LocalDate.now().toString
     val systemPrompt =
       s"""You extract interaction metadata from natural language descriptions.
+         |Today's date is $today.
          |Known contacts: [$namesStr]
          |Respond with JSON only, no other text.
-         |JSON schema: { "personName": "...", "medium": "InPerson|Text|PhoneCall|VideoCall|SocialMedia", "location": "...", "theirLocation": null, "topics": ["..."], "note": null, "date": null }
+         |JSON schema: { "personNames": ["..."], "medium": "InPerson|Text|PhoneCall|VideoCall|SocialMedia", "location": "...", "theirLocation": null, "topics": ["..."], "note": null, "date": null }
          |Rules:
-         |- personName must match one of the known contacts as closely as possible
+         |- personNames is an array of ALL people mentioned in the input. If multiple people are mentioned, include all of them. Use names exactly as written. Match to known contacts when possible. NEVER substitute different names.
          |- If the medium is not mentioned, default to "InPerson"
-         |- location is where the interaction happened (required, use a reasonable default from context)
+         |- location: use the most specific location from the input (e.g. "Charlton, MA" not just "home"). Include the full place name, city, or address as given.
          |- theirLocation is only for remote interactions where their location differs; set to null for in-person
-         |- topics should be a list of discussion subjects extracted from the description
+         |- topics: ONLY include activities or subjects explicitly mentioned in the input. Do NOT infer or add topics that weren't stated. Be aware of slang (e.g. "gas" means great/amazing, not cooking).
          |- note is for any additional context not captured in other fields; set to null if none
-         |- date should be "YYYY-MM-DD" if mentioned, otherwise null (today will be used)""".stripMargin
+         |- date: ONLY set to a "YYYY-MM-DD" string if the user explicitly mentions a specific date (e.g. "yesterday", "last Friday", "on March 5th"). Otherwise MUST be null. null means today.""".stripMargin
 
     val requestBody = ujson.Obj(
       "model" -> model,
@@ -109,17 +111,25 @@ object LLMService {
   private def parseJsonResponse(content: String): Either[String, ParsedInteraction] = {
     try {
       val json = ujson.read(content)
-      val personName = json("personName").str
-      val medium = json("medium").str
-      val location = json("location").str
-      val theirLocation = json.obj.get("theirLocation").flatMap(v => if (v.isNull) None else Some(v.str))
-      val topics = json("topics").arr.map(_.str).toList
-      val note = json.obj.get("note").flatMap(v => if (v.isNull) None else Some(v.str))
-      val date = json.obj.get("date").flatMap(v => if (v.isNull) None else Some(v.str))
+      def str(key: String): Option[String] =
+        json.obj.get(key).flatMap(v => if (v.isNull) None else Some(v.str))
 
-      if (personName.isEmpty) Left("LLM did not extract a person name")
+      val personNames = json.obj.get("personNames") match {
+        case Some(v) if !v.isNull => v.arr.map(_.str).toList.filter(_.nonEmpty)
+        case _ =>
+          // Fall back to single personName for backward compatibility
+          str("personName").filter(_.nonEmpty).toList
+      }
+      val medium = str("medium").getOrElse("InPerson")
+      val location = str("location").getOrElse("")
+      val theirLocation = str("theirLocation")
+      val topics = json.obj.get("topics").map(_.arr.map(_.str).toList).getOrElse(List.empty)
+      val note = str("note")
+      val date = str("date")
+
+      if (personNames.isEmpty) Left("LLM did not extract any person names")
       else if (topics.isEmpty) Left("LLM did not extract any topics")
-      else Right(ParsedInteraction(personName, medium, location, theirLocation, topics, note, date))
+      else Right(ParsedInteraction(personNames, medium, location, theirLocation, topics, note, date))
     } catch {
       case e: Exception =>
         Left(s"Failed to parse LLM response: ${e.getMessage}")
