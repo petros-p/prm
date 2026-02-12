@@ -207,6 +207,7 @@ class REPL(dataFile: Path) {
   private val circleCommands = new CircleCommands(ctx)
   private val labelCommands = new LabelCommands(ctx)
   private val interactionCommands = new InteractionCommands(ctx)
+  private val aiLogCommand = new AILogCommand(ctx)
   private var running = true
 
   /**
@@ -348,6 +349,7 @@ class REPL(dataFile: Path) {
 
       // Interaction commands
       case "log" => interactionCommands.log(args)
+      case "ai-log" => aiLogCommand.log(args)
       case "remind" | "reminders" => interactionCommands.showReminders()
       case "set-reminder" => interactionCommands.setReminder(args)
 
@@ -433,7 +435,8 @@ COMMANDS:
     archived-labels         List archived labels
 
   Interactions:
-    log <name>              Log an interaction
+    log <name>              Log an interaction (manual prompts)
+    ai-log <description>    Log via natural language (AI-parsed)
     remind                  Show overdue reminders
     set-reminder <name>     Set reminder frequency
 
