@@ -1,10 +1,23 @@
+# IDE / editor
 .bloop
-.claude
-.data
 .metals
 .vscode
+
+# Claude Code
+.claude
+
+# Data
+.data
+
+# Scala / SBT
 project/.bloop
 project/project
 project/target
 project/metals.sbt
 target
+
+# Rust
+prm-rust/target
+
+# Windows artifacts
+nul
