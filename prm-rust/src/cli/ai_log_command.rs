@@ -32,7 +32,7 @@ pub fn ai_log(ctx: &CLIContext, args: &str) {
     }
 }
 
-fn review_and_save(ctx: &CLIContext, initial: ParsedInteraction) {
+pub fn review_and_save(ctx: &CLIContext, initial: ParsedInteraction) {
     let mut current = initial;
 
     loop {

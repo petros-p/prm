@@ -4,6 +4,7 @@ pub mod circle_commands;
 pub mod label_commands;
 pub mod interaction_commands;
 pub mod ai_log_command;
+pub mod voice_log_command;
 
 use std::path::Path;
 use rusqlite::Connection;
@@ -186,6 +187,7 @@ fn repl_loop(ctx: &CLIContext) {
 
             // AI-assisted
             "ai-log" => ai_log_command::ai_log(ctx, args),
+            "voice-log" => voice_log_command::voice_log(ctx, args),
 
             // Other
             "stats" => interaction_commands::print_stats(ctx),
@@ -251,6 +253,7 @@ COMMANDS:
   Interactions:
     log <name>              Log an interaction (manual prompts)
     ai-log <description>    Log via AI (natural language)
+    voice-log <wav-file>    Log via voice recording (local Whisper transcription)
     remind                  Show overdue reminders
     set-reminder <name>     Set reminder frequency
 
