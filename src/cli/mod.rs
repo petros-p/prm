@@ -167,6 +167,7 @@ fn repl_loop(ctx: &CLIContext) {
             "people" | "list" | "ls" => person_commands::list(ctx),
             "add-person" => person_commands::add(ctx, args),
             "show-person" | "show" | "view" => person_commands::show(ctx, args),
+            "history" => person_commands::history(ctx, args),
             "edit-person" => person_commands::edit(ctx, args),
             "find" => person_commands::find(ctx, args),
             "archive-person" => person_commands::archive(ctx, args),
@@ -237,6 +238,7 @@ COMMANDS:
     people                  List all people
     add-person [name]       Add a new person (interactive)
     show-person <name>      Show person details
+    history <name>          Show full interaction history
     edit-person <name>      Edit a person (menu)
     find <query>            Search people, circles, and labels
     archive-person <name>   Archive a person

@@ -209,20 +209,64 @@ pub fn show(ctx: &CLIContext, args: &str) {
     let reminder = rel.and_then(|r| r.reminder_days);
     println!("Reminder: {}", reminder.map(|d| format!("every {} days", d)).unwrap_or_else(|| "(none)".into()));
 
-    let last = interaction_queries::last_interaction_with(&ctx.conn, person.id).ok().flatten();
-    match last {
-        Some(interaction) => {
-            let days = interaction_queries::days_since_interaction(&ctx.conn, person.id, CLIContext::today())
-                .ok()
-                .flatten()
-                .unwrap_or(0);
-            println!("Last interaction: {} via {}", CLIContext::format_days_ago(days), interaction.medium.display_name());
+    let interactions = interaction_queries::interactions_with(&ctx.conn, person.id).unwrap_or_default();
+    let total = interactions.len();
+
+    if total == 0 {
+        println!("Interactions: (none)");
+    } else {
+        const PREVIEW: usize = 5;
+        let shown = total.min(PREVIEW);
+        println!("Interactions ({}):", total);
+        for i in &interactions[..shown] {
+            let topics = i.topics.join(", ");
+            println!("  {}  {}  {}", i.date, i.medium.display_name(), topics);
+            if let Some(note) = &i.note {
+                println!("             Note: {}", note);
+            }
         }
-        None => println!("Last interaction: (never)"),
+        if total > PREVIEW {
+            println!("  ... use 'history {}' to see all", person.name.to_lowercase());
+        }
     }
+    println!();
+}
+
+pub fn history(ctx: &CLIContext, args: &str) {
+    let person = match if args.is_empty() {
+        println!("Usage: history <name>");
+        return;
+    } else {
+        ctx.find_person(args)
+    } {
+        Some(p) => p,
+        None => return,
+    };
 
     let interactions = interaction_queries::interactions_with(&ctx.conn, person.id).unwrap_or_default();
-    println!("Total interactions: {}", interactions.len());
+
+    if interactions.is_empty() {
+        println!("No interactions logged with {}.", person.name);
+        return;
+    }
+
+    println!("Interaction history with {} ({} total):", person.name, interactions.len());
+    for interaction in &interactions {
+        println!();
+        let location = if interaction.medium == crate::model::InteractionMedium::InPerson {
+            interaction.my_location.clone()
+        } else {
+            let their = interaction.their_location.as_deref()
+                .map(|l| format!(" / them: {}", l))
+                .unwrap_or_default();
+            format!("you: {}{}", interaction.my_location, their)
+        };
+        println!("  {}  {}  {}", interaction.date, interaction.medium.display_name(), location);
+        println!("  Topics: {}", interaction.topics.join(", "));
+        if let Some(note) = &interaction.note {
+            println!("  Note: {}", note);
+        }
+    }
     println!();
 }
 
