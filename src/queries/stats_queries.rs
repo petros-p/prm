@@ -28,8 +28,8 @@ pub struct NetworkStats {
 
 pub fn stats(conn: &Connection, owner_id: Id<User>, self_id: Id<Person>) -> PrmResult<NetworkStats> {
     let all_people = person_repo::find_by_owner(conn, owner_id)?;
-    let active = all_people.iter().filter(|p| !p.archived).count();
-    let archived = all_people.iter().filter(|p| p.archived).count();
+    let active = all_people.iter().filter(|p| !p.archived && p.id != self_id).count();
+    let archived = all_people.iter().filter(|p| p.archived && p.id != self_id).count();
 
     let rels = relationship_repo::find_by_owner(conn, owner_id)?;
     let total_interactions = interaction_repo::count_by_owner(conn, owner_id)?;
@@ -58,7 +58,7 @@ pub fn stats(conn: &Connection, owner_id: Id<User>, self_id: Id<Person>) -> PrmR
             None => never_contacted += 1,
             Some(d) => {
                 let days = (today - d).num_days();
-                if longest_gap.as_ref().map_or(true, |(_, g)| days > *g) {
+                if days > 0 && longest_gap.as_ref().map_or(true, |(_, g)| days > *g) {
                     longest_gap = Some((person.name.clone(), days));
                 }
             }

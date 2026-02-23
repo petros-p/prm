@@ -4,7 +4,8 @@ use crate::ops::*;
 use crate::queries::*;
 
 pub fn list(ctx: &CLIContext) {
-    let labels = relationship_queries::active_labels(&ctx.conn, ctx.owner_id()).unwrap_or_default();
+    let all_labels = relationship_queries::active_labels(&ctx.conn, ctx.owner_id()).unwrap_or_default();
+    let labels: Vec<_> = all_labels.iter().filter(|l| l.name != "me").collect();
     if labels.is_empty() {
         println!("No labels yet. Use 'add-label <name>' to create one.");
     } else {

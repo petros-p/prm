@@ -55,7 +55,8 @@ pub fn show(ctx: &CLIContext, args: &str) {
             println!("Description: {}", circle.description.as_deref().unwrap_or("(none)"));
             println!("Archived: {}", if circle.archived { "yes" } else { "no" });
 
-            let members = circle_queries::circle_members(&ctx.conn, circle.id).unwrap_or_default();
+            let all_members = circle_queries::circle_members(&ctx.conn, circle.id).unwrap_or_default();
+            let members: Vec<_> = all_members.iter().filter(|p| p.id != ctx.self_id).collect();
             if members.is_empty() {
                 println!("Members: (none)");
             } else {
