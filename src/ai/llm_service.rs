@@ -4,6 +4,13 @@ use serde::{Deserialize, Serialize};
 const DEFAULT_OLLAMA_URL: &str = "http://localhost:11434";
 const DEFAULT_MODEL: &str = "llama3.2:3b";
 
+/// A past correction: what the AI parsed vs what the user actually saved.
+pub struct CorrectionExample {
+    pub original_text: String,
+    pub ai_output: String,
+    pub user_output: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParsedInteraction {
     #[serde(default, alias = "personName")]
@@ -47,10 +54,28 @@ pub fn check_ollama() -> Result<(), String> {
 pub fn parse_interaction(
     input: &str,
     known_names: &[String],
+    corrections: &[CorrectionExample],
 ) -> Result<ParsedInteraction, String> {
     let names_str = known_names.join(", ");
     let today = chrono::Local::now().format("%Y-%m-%d");
     let model = ollama_model();
+
+    let corrections_block = if corrections.is_empty() {
+        String::new()
+    } else {
+        let mut block = String::from("\nPast corrections to learn from (most recent first):\n");
+        for (i, c) in corrections.iter().enumerate() {
+            block.push_str(&format!(
+                "\nExample {}:\nInput: {}\nYou parsed: {}\nUser corrected to: {}\n",
+                i + 1,
+                c.original_text,
+                c.ai_output,
+                c.user_output,
+            ));
+        }
+        block.push_str("\nApply these learnings when parsing the new input.\n");
+        block
+    };
 
     let system_prompt = format!(
         r#"You extract interaction metadata from natural language descriptions.
@@ -65,7 +90,7 @@ Rules:
 - theirLocation is only for remote interactions where their location differs; set to null for in-person
 - topics: ONLY include activities or subjects explicitly mentioned in the input. Do NOT infer or add topics that weren't stated. Be aware of slang (e.g. "gas" means great/amazing, not cooking).
 - note is for any additional context not captured in other fields; set to null if none
-- date: ONLY set to a "YYYY-MM-DD" string if the user explicitly mentions a specific date (e.g. "yesterday", "last Friday", "on March 5th"). Otherwise MUST be null. null means today."#
+- date: ONLY set to a "YYYY-MM-DD" string if the user explicitly mentions a specific date (e.g. "yesterday", "last Friday", "on March 5th"). Otherwise MUST be null. null means today.{corrections_block}"#
     );
 
     let request_body = serde_json::json!({

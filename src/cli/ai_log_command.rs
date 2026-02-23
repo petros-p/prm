@@ -1,7 +1,8 @@
 use chrono::NaiveDate;
 
-use crate::ai::llm_service::{self, ParsedInteraction};
+use crate::ai::llm_service::{self, CorrectionExample, ParsedInteraction};
 use crate::cli::context::CLIContext;
+use crate::db::correction_repo;
 use crate::model::*;
 use crate::ops::*;
 use crate::queries::*;
@@ -25,14 +26,26 @@ pub fn ai_log(ctx: &CLIContext, args: &str) {
         .map(|p| p.name)
         .collect();
 
+    let corrections: Vec<CorrectionExample> =
+        correction_repo::recent(&ctx.conn, ctx.owner_id(), 5)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|r| CorrectionExample {
+                original_text: r.original_text,
+                ai_output: r.ai_output,
+                user_output: r.user_output,
+            })
+            .collect();
+
     println!("Parsing with AI (local)...");
-    match llm_service::parse_interaction(args, &known_names) {
+    match llm_service::parse_interaction(args, &known_names, &corrections) {
         Err(err) => println!("Error: {}", err),
-        Ok(parsed) => review_and_save(ctx, parsed),
+        Ok(parsed) => review_and_save(ctx, args, parsed),
     }
 }
 
-pub fn review_and_save(ctx: &CLIContext, initial: ParsedInteraction) {
+pub fn review_and_save(ctx: &CLIContext, original_text: &str, initial: ParsedInteraction) {
+    let ai_original = initial.clone();
     let mut current = initial;
 
     loop {
@@ -47,6 +60,7 @@ pub fn review_and_save(ctx: &CLIContext, initial: ParsedInteraction) {
 
         match choice.as_str() {
             "s" | "save" => {
+                maybe_save_correction(ctx, original_text, &ai_original, &current);
                 save_interaction(ctx, &current);
                 return;
             }
@@ -59,6 +73,31 @@ pub fn review_and_save(ctx: &CLIContext, initial: ParsedInteraction) {
             }
             _ => println!("Invalid choice. Enter 's' to save, 'e' to edit, or 'd' to discard."),
         }
+    }
+}
+
+fn maybe_save_correction(
+    ctx: &CLIContext,
+    original_text: &str,
+    ai_original: &ParsedInteraction,
+    user_final: &ParsedInteraction,
+) {
+    let ai_json = match serde_json::to_string(ai_original) {
+        Ok(j) => j,
+        Err(_) => return,
+    };
+    let user_json = match serde_json::to_string(user_final) {
+        Ok(j) => j,
+        Err(_) => return,
+    };
+    if ai_json != user_json {
+        let _ = correction_repo::insert(
+            &ctx.conn,
+            ctx.owner_id(),
+            original_text,
+            &ai_json,
+            &user_json,
+        );
     }
 }
 

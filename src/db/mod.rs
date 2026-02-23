@@ -5,3 +5,4 @@ pub mod relationship_repo;
 pub mod interaction_repo;
 pub mod circle_repo;
 pub mod network_repo;
+pub mod correction_repo;

@@ -1,8 +1,9 @@
 use std::path::Path;
 
-use crate::ai::{llm_service, whisper_service};
+use crate::ai::{llm_service::{self, CorrectionExample}, whisper_service};
 use crate::cli::ai_log_command;
 use crate::cli::context::CLIContext;
+use crate::db::correction_repo;
 use crate::queries::person_queries;
 
 pub fn voice_log(ctx: &CLIContext, args: &str) {
@@ -53,9 +54,20 @@ pub fn voice_log(ctx: &CLIContext, args: &str) {
         .map(|p| p.name)
         .collect();
 
+    let corrections: Vec<CorrectionExample> =
+        correction_repo::recent(&ctx.conn, ctx.owner_id(), 5)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|r| CorrectionExample {
+                original_text: r.original_text,
+                ai_output: r.ai_output,
+                user_output: r.user_output,
+            })
+            .collect();
+
     println!("Parsing with AI (local)...");
-    match llm_service::parse_interaction(&text, &known_names) {
+    match llm_service::parse_interaction(&text, &known_names, &corrections) {
         Err(err) => println!("Error: {}", err),
-        Ok(parsed) => ai_log_command::review_and_save(ctx, parsed),
+        Ok(parsed) => ai_log_command::review_and_save(ctx, &text, parsed),
     }
 }

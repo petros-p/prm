@@ -104,6 +104,15 @@ pub fn initialize(conn: &Connection) -> PrmResult<()> {
             self_id TEXT NOT NULL REFERENCES people(id)
         );
 
+        CREATE TABLE IF NOT EXISTS ai_corrections (
+            id TEXT PRIMARY KEY NOT NULL,
+            owner_id TEXT NOT NULL REFERENCES users(id),
+            original_text TEXT NOT NULL,
+            ai_output TEXT NOT NULL,
+            user_output TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
         PRAGMA foreign_keys = ON;
         ",
     )?;
