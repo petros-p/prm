@@ -7,7 +7,8 @@ use crate::ops::*;
 use crate::queries::*;
 
 pub fn list(ctx: &CLIContext) {
-    let people = person_queries::active_people(&ctx.conn, ctx.owner_id()).unwrap_or_default();
+    let all = person_queries::active_people(&ctx.conn, ctx.owner_id()).unwrap_or_default();
+    let people: Vec<_> = all.iter().filter(|p| p.id != ctx.self_id).collect();
     if people.is_empty() {
         println!("No people in your network yet. Use 'add-person' to add someone.");
         return;
