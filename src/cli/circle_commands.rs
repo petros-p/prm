@@ -29,7 +29,8 @@ pub fn add(ctx: &CLIContext, args: &str) {
     let desc_opt = if desc.is_empty() { None } else { Some(desc.as_str()) };
 
     println!("Add members (enter numbers separated by spaces, or press Enter to skip):");
-    let people = person_queries::active_people(&ctx.conn, ctx.owner_id()).unwrap_or_default();
+    let all_people = person_queries::active_people(&ctx.conn, ctx.owner_id()).unwrap_or_default();
+    let people: Vec<_> = all_people.iter().filter(|p| p.id != ctx.self_id).collect();
     for (i, person) in people.iter().enumerate() {
         println!("  {}. {}", i + 1, person.name);
     }

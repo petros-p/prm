@@ -19,15 +19,18 @@ pub fn log_for_person(ctx: &CLIContext, person: &Person) {
     }
 
     let medium_input = ctx.prompt("Medium (1-5): ").unwrap_or_default();
-    let medium = medium_input
+    let medium = match medium_input
         .parse::<usize>()
         .ok()
         .and_then(|i| InteractionMedium::ALL.get(i.wrapping_sub(1)))
         .copied()
-        .unwrap_or_else(|| {
-            println!("Invalid selection, defaulting to In Person");
-            InteractionMedium::InPerson
-        });
+    {
+        Some(m) => m,
+        None => {
+            println!("Invalid selection.");
+            return;
+        }
+    };
 
     let (my_location, their_location) = if medium == InteractionMedium::InPerson {
         let default_loc = person.location.as_ref().map(|l| format!(" [{}]", l)).unwrap_or_default();
