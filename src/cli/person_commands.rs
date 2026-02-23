@@ -866,18 +866,24 @@ fn add_emails_loop(ctx: &CLIContext, person_id: Id<Person>) {
 }
 
 fn set_reminder_for(ctx: &CLIContext, person_id: Id<Person>) {
-    let input = match ctx.prompt("Remind every how many days: ") {
+    let input = match ctx.prompt("Remind every how many days (0 to remove): ") {
         Some(s) => s,
         None => return,
     };
     match input.parse::<i32>() {
+        Ok(0) => {
+            match relationship_ops::set_reminder(&ctx.conn, person_id, None) {
+                Ok(_) => println!("Reminder removed."),
+                Err(e) => ctx.print_error(&e),
+            }
+        }
         Ok(days) if days > 0 => {
             match relationship_ops::set_reminder(&ctx.conn, person_id, Some(days)) {
                 Ok(_) => println!("Reminder set for every {} days", days),
                 Err(e) => ctx.print_error(&e),
             }
         }
-        _ => println!("Invalid number, skipping reminder."),
+        _ => println!("Invalid number."),
     }
 }
 
