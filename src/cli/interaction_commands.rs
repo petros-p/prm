@@ -175,12 +175,23 @@ pub fn set_reminder(ctx: &CLIContext, args: &str) {
 }
 
 pub fn print_stats(ctx: &CLIContext) {
-    match stats_queries::stats(&ctx.conn, ctx.owner_id()) {
+    match stats_queries::stats(&ctx.conn, ctx.owner_id(), ctx.self_id) {
         Ok(s) => {
             println!();
             println!("People: {} active, {} archived", s.active_people, s.archived_people);
+            if s.never_contacted > 0 {
+                println!("  Never contacted: {}", s.never_contacted);
+            }
+            if s.no_reminder_set > 0 {
+                println!("  No reminder set: {}", s.no_reminder_set);
+            }
             println!("Interactions: {}", s.total_interactions);
-            println!("Circles: {} active, {} archived", s.active_circles, s.archived_circles);
+            if let Some((name, days)) = &s.longest_gap {
+                println!("  Longest gap: {} ({})", name, CLIContext::format_days_ago(*days));
+            }
+            if s.active_circles > 0 {
+                println!("Circles: {} active, {} archived", s.active_circles, s.archived_circles);
+            }
             if s.reminders_overdue > 0 {
                 println!("Reminders overdue: {}", s.reminders_overdue);
             }
