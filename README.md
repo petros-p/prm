@@ -26,7 +26,8 @@ Data is stored in `.data/prm.db` (SQLite).
 |---------|-------------|
 | `people` | List all people |
 | `add-person [name]` | Add a person (interactive) |
-| `show-person <name>` | Show person details |
+| `show-person <name>` | Show person details (with recent interactions) |
+| `history <name>` | Show full interaction history |
 | `edit-person <name>` | Edit a person (menu) |
 | `find <query>` | Search people, circles, labels |
 | `archive-person <name>` | Archive a person |
@@ -75,7 +76,7 @@ Data is stored in `.data/prm.db` (SQLite).
 | `log <name>` | Log an interaction (manual) |
 | `ai-log <description>` | Log via AI (natural language, local Ollama) |
 | `voice-log <wav-file>` | Log via voice recording (local Whisper transcription) |
-| `remind` | Show overdue reminders |
+| `remind` | Show overdue and upcoming reminders |
 | `set-reminder <name>` | Set reminder frequency |
 
 ### Other
