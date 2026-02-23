@@ -11,6 +11,7 @@ use rusqlite::Connection;
 
 use crate::db::{schema, network_repo, person_repo, relationship_repo};
 use crate::model::*;
+use crate::queries::reminder_queries;
 use context::CLIContext;
 
 /// Run the interactive REPL.
@@ -36,6 +37,8 @@ pub fn run(db_path: &Path) {
         Some(ctx) => ctx,
         None => return,
     };
+
+    show_startup_reminders(&ctx);
 
     repl_loop(&ctx);
 }
@@ -120,6 +123,26 @@ fn init_new_network(conn: Connection) -> Option<CLIContext> {
     println!();
 
     Some(CLIContext::new(conn, user, self_person.id))
+}
+
+fn show_startup_reminders(ctx: &CLIContext) {
+    let today = CLIContext::today();
+    let overdue = reminder_queries::people_needing_reminder(&ctx.conn, ctx.owner_id(), today)
+        .unwrap_or_default();
+
+    if overdue.is_empty() {
+        return;
+    }
+
+    println!("Reminders ({} overdue):", overdue.len());
+    for status in &overdue {
+        let detail = match &status.overdue_status {
+            reminder_queries::OverdueStatus::NeverContacted => "never contacted".to_string(),
+            reminder_queries::OverdueStatus::DaysOverdue(days) => format!("{} days overdue", days),
+        };
+        println!("  {} — {}", status.person.name, detail);
+    }
+    println!();
 }
 
 fn repl_loop(ctx: &CLIContext) {
