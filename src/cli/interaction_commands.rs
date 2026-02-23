@@ -91,28 +91,58 @@ pub fn log_for_person(ctx: &CLIContext, person: &Person) {
 }
 
 pub fn show_reminders(ctx: &CLIContext) {
+    const DUE_SOON_DAYS: i64 = 7;
     let today = CLIContext::today();
-    let overdue = reminder_queries::people_needing_reminder(&ctx.conn, ctx.owner_id(), today).unwrap_or_default();
+    let all = reminder_queries::all_reminders(&ctx.conn, ctx.owner_id(), today).unwrap_or_default();
 
-    if overdue.is_empty() {
-        println!("No overdue reminders! You're all caught up.");
+    let overdue: Vec<_> = all.iter().filter(|s| match &s.overdue_status {
+        reminder_queries::OverdueStatus::NeverContacted => true,
+        reminder_queries::OverdueStatus::DaysOverdue(d) => *d > 0,
+    }).collect();
+
+    let due_soon: Vec<_> = all.iter().filter(|s| match &s.overdue_status {
+        reminder_queries::OverdueStatus::NeverContacted => false,
+        reminder_queries::OverdueStatus::DaysOverdue(d) => *d <= 0 && *d > -DUE_SOON_DAYS,
+    }).collect();
+
+    if overdue.is_empty() && due_soon.is_empty() {
+        println!("No reminders due. You're all caught up.");
         return;
     }
 
-    println!("People to reach out to ({}):", overdue.len());
-    println!();
-    for status in &overdue {
-        let overdue_str = match &status.overdue_status {
-            reminder_queries::OverdueStatus::NeverContacted => "never contacted".into(),
-            reminder_queries::OverdueStatus::DaysOverdue(days) => {
-                let last_contact = status
-                    .days_since_last_interaction
-                    .map(|d| format!("last contact {}", CLIContext::format_days_ago(d)))
+    if !overdue.is_empty() {
+        println!("Overdue ({}):", overdue.len());
+        for status in &overdue {
+            let detail = match &status.overdue_status {
+                reminder_queries::OverdueStatus::NeverContacted => "never contacted".into(),
+                reminder_queries::OverdueStatus::DaysOverdue(d) => {
+                    let last = status.days_since_last_interaction
+                        .map(|d| format!("last contact {}", CLIContext::format_days_ago(d)))
+                        .unwrap_or_default();
+                    format!("{} days overdue ({})", d, last)
+                }
+            };
+            println!("  {} — {}", status.person.name, detail);
+        }
+    }
+
+    if !due_soon.is_empty() {
+        if !overdue.is_empty() { println!(); }
+        println!("Due soon ({}):", due_soon.len());
+        for status in &due_soon {
+            if let reminder_queries::OverdueStatus::DaysOverdue(d) = &status.overdue_status {
+                let days_until = -d;
+                let last = status.days_since_last_interaction
+                    .map(|d| format!(", last contact {}", CLIContext::format_days_ago(d)))
                     .unwrap_or_default();
-                format!("{} days overdue ({})", days, last_contact)
+                println!("  {} — due in {} day{}{}",
+                    status.person.name,
+                    days_until,
+                    if days_until == 1 { "" } else { "s" },
+                    last,
+                );
             }
-        };
-        println!("  {} - {}", status.person.name, overdue_str);
+        }
     }
 }
 

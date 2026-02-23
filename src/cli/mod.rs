@@ -126,22 +126,41 @@ fn init_new_network(conn: Connection) -> Option<CLIContext> {
 }
 
 fn show_startup_reminders(ctx: &CLIContext) {
+    const DUE_SOON_DAYS: i64 = 7;
     let today = CLIContext::today();
-    let overdue = reminder_queries::people_needing_reminder(&ctx.conn, ctx.owner_id(), today)
+    let all = reminder_queries::all_reminders(&ctx.conn, ctx.owner_id(), today)
         .unwrap_or_default();
 
-    if overdue.is_empty() {
+    let overdue: Vec<_> = all.iter().filter(|s| match &s.overdue_status {
+        reminder_queries::OverdueStatus::NeverContacted => true,
+        reminder_queries::OverdueStatus::DaysOverdue(d) => *d > 0,
+    }).collect();
+
+    let due_soon: Vec<_> = all.iter().filter(|s| match &s.overdue_status {
+        reminder_queries::OverdueStatus::NeverContacted => false,
+        reminder_queries::OverdueStatus::DaysOverdue(d) => *d <= 0 && *d > -DUE_SOON_DAYS,
+    }).collect();
+
+    if overdue.is_empty() && due_soon.is_empty() {
         return;
     }
 
-    println!("Reminders ({} overdue):", overdue.len());
-    for status in &overdue {
-        let detail = match &status.overdue_status {
-            reminder_queries::OverdueStatus::NeverContacted => "never contacted".to_string(),
-            reminder_queries::OverdueStatus::DaysOverdue(days) => format!("{} days overdue", days),
-        };
-        println!("  {} — {}", status.person.name, detail);
+    if !overdue.is_empty() {
+        println!("Reminders ({} overdue):", overdue.len());
+        for status in &overdue {
+            let detail = match &status.overdue_status {
+                reminder_queries::OverdueStatus::NeverContacted => "never contacted".to_string(),
+                reminder_queries::OverdueStatus::DaysOverdue(d) => format!("{} days overdue", d),
+            };
+            println!("  {} — {}", status.person.name, detail);
+        }
     }
+
+    if !due_soon.is_empty() {
+        let names: Vec<&str> = due_soon.iter().map(|s| s.person.name.as_str()).collect();
+        println!("  Due soon: {}", names.join(", "));
+    }
+
     println!();
 }
 
