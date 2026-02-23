@@ -105,16 +105,16 @@ pub fn add(ctx: &CLIContext, args: &str) {
         let _ = person_ops::update_person(&ctx.conn, person.id, None, None, Some(Some(&how_we_met)), None, None, None);
     }
 
-    // Notes
-    let notes = prompt_or_save!("Notes: ");
-    if !notes.is_empty() {
-        let _ = person_ops::update_person(&ctx.conn, person.id, None, None, None, None, Some(Some(&notes)), None);
-    }
-
     // Location
     let location = prompt_or_save!("Location: ");
     if !location.is_empty() {
         let _ = person_ops::update_person(&ctx.conn, person.id, None, None, None, None, None, Some(Some(&location)));
+    }
+
+    // Notes
+    let notes = prompt_or_save!("Notes: ");
+    if !notes.is_empty() {
+        let _ = person_ops::update_person(&ctx.conn, person.id, None, None, None, None, Some(Some(&notes)), None);
     }
 
     // Labels
