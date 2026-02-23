@@ -1,6 +1,7 @@
 use chrono::NaiveDate;
 
 use crate::cli::context::CLIContext;
+use crate::db::person_repo;
 use crate::model::*;
 use crate::ops::*;
 use crate::queries::*;
@@ -226,45 +227,70 @@ pub fn show(ctx: &CLIContext, args: &str) {
 }
 
 pub fn edit(ctx: &CLIContext, args: &str) {
-    let person = match if args.is_empty() {
+    if args.is_empty() {
         println!("Usage: edit-person <name>");
         return;
-    } else {
-        ctx.find_person(args)
-    } {
+    }
+
+    let initial = match ctx.find_person(args) {
         Some(p) => p,
         None => return,
     };
 
-    println!("Editing {}", person.name);
-    println!();
-    println!("What would you like to edit?");
-    println!("  1. Name");
-    println!("  2. Nickname");
-    println!("  3. Birthday");
-    println!("  4. How we met");
-    println!("  5. Notes");
-    println!("  6. Location");
-    println!("  7. Labels");
-    println!("  8. Circles");
-    println!("  9. Phone numbers");
-    println!(" 10. Email addresses");
-    println!();
+    let person_id = initial.id;
+    println!("Editing {} — press Enter with no choice to finish.", initial.name);
 
-    match ctx.prompt("Choice (1-10, or Enter to cancel): ").as_deref() {
-        Some("1") => edit_name_cmd(ctx, &person),
-        Some("2") => edit_nickname_cmd(ctx, &person),
-        Some("3") => edit_birthday_cmd(ctx, &person),
-        Some("4") => edit_how_we_met_cmd(ctx, &person),
-        Some("5") => edit_notes_cmd(ctx, &person),
-        Some("6") => edit_location_cmd(ctx, &person),
-        Some("7") => select_labels(ctx, person.id),
-        Some("8") => select_circles(ctx, person.id),
-        Some("9") => edit_phones_cmd(ctx, &person),
-        Some("10") => edit_emails_cmd(ctx, &person),
-        Some("") => println!("Cancelled."),
-        _ => println!("Invalid choice."),
+    loop {
+        let person = match person_repo::find_by_id(&ctx.conn, person_id).ok().flatten() {
+            Some(p) => p,
+            None => { println!("Person not found."); break; }
+        };
+
+        let labels = ctx.labels_for(person_id);
+        let label_str = if labels.is_empty() {
+            "—".into()
+        } else {
+            labels.iter().map(|l| l.name.as_str()).collect::<Vec<_>>().join(", ")
+        };
+        let circles = ctx.circles_for(person_id);
+        let circle_str = if circles.is_empty() {
+            "—".into()
+        } else {
+            circles.iter().map(|c| c.name.as_str()).collect::<Vec<_>>().join(", ")
+        };
+        let contacts = ctx.contacts_for(person_id);
+        let phones = format_contacts(&contacts, "Phone");
+        let emails = format_contacts(&contacts, "Email");
+
+        println!();
+        println!("  1. Name        {}", person.name);
+        println!("  2. Nickname    {}", person.nickname.as_deref().unwrap_or("—"));
+        println!("  3. Birthday    {}", person.birthday.map(|d| d.to_string()).unwrap_or_else(|| "—".into()));
+        println!("  4. How we met  {}", person.how_we_met.as_deref().unwrap_or("—"));
+        println!("  5. Notes       {}", person.notes.as_deref().unwrap_or("—"));
+        println!("  6. Location    {}", person.location.as_deref().unwrap_or("—"));
+        println!("  7. Labels      {}", label_str);
+        println!("  8. Circles     {}", circle_str);
+        println!("  9. Phone       {}", phones);
+        println!(" 10. Email       {}", emails);
+
+        match ctx.prompt("Edit (1-10, or Enter to finish): ").as_deref() {
+            Some("1") => edit_name_cmd(ctx, &person),
+            Some("2") => edit_nickname_cmd(ctx, &person),
+            Some("3") => edit_birthday_cmd(ctx, &person),
+            Some("4") => edit_how_we_met_cmd(ctx, &person),
+            Some("5") => edit_notes_cmd(ctx, &person),
+            Some("6") => edit_location_cmd(ctx, &person),
+            Some("7") => select_labels(ctx, person_id),
+            Some("8") => select_circles(ctx, person_id),
+            Some("9") => edit_phones_cmd(ctx, &person),
+            Some("10") => edit_emails_cmd(ctx, &person),
+            Some("") | None => break,
+            _ => println!("Invalid choice."),
+        }
     }
+
+    println!("Done.");
 }
 
 pub fn find(ctx: &CLIContext, args: &str) {
