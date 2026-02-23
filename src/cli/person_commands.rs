@@ -261,6 +261,11 @@ pub fn edit(ctx: &CLIContext, args: &str) {
         let contacts = ctx.contacts_for(person_id);
         let phones = format_contacts(&contacts, "Phone");
         let emails = format_contacts(&contacts, "Email");
+        let rel = relationship_queries::get_relationship(&ctx.conn, person_id).ok().flatten();
+        let reminder_str = rel
+            .and_then(|r| r.reminder_days)
+            .map(|d| format!("every {} days", d))
+            .unwrap_or_else(|| "—".into());
 
         println!();
         println!("  1. Name        {}", person.name);
@@ -273,8 +278,9 @@ pub fn edit(ctx: &CLIContext, args: &str) {
         println!("  8. Circles     {}", circle_str);
         println!("  9. Phone       {}", phones);
         println!(" 10. Email       {}", emails);
+        println!(" 11. Reminder    {}", reminder_str);
 
-        match ctx.prompt("Edit (1-10, or Enter to finish): ").as_deref() {
+        match ctx.prompt("Edit (1-11, or Enter to finish): ").as_deref() {
             Some("1") => edit_name_cmd(ctx, &person),
             Some("2") => edit_nickname_cmd(ctx, &person),
             Some("3") => edit_birthday_cmd(ctx, &person),
@@ -285,6 +291,7 @@ pub fn edit(ctx: &CLIContext, args: &str) {
             Some("8") => select_circles(ctx, person_id),
             Some("9") => edit_phones_cmd(ctx, &person),
             Some("10") => edit_emails_cmd(ctx, &person),
+            Some("11") => set_reminder_for(ctx, person_id),
             Some("") | None => break,
             _ => println!("Invalid choice."),
         }
