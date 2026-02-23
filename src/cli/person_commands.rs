@@ -26,15 +26,14 @@ pub fn list(ctx: &CLIContext) {
             format!(" [{}]", names.join(", "))
         };
 
-        let last_contact = interaction_queries::days_since_interaction(
+        let last_contact = match interaction_queries::days_since_interaction(
             &ctx.conn,
             person.id,
             CLIContext::today(),
-        )
-        .ok()
-        .flatten()
-        .map(|d| format!(" - last contact: {}", CLIContext::format_days_ago(d)))
-        .unwrap_or_default();
+        ).ok().flatten() {
+            Some(d) => format!(" - last contact: {}", CLIContext::format_days_ago(d)),
+            None => " - never contacted".to_string(),
+        };
 
         println!("  {}{}{}", person.name, label_str, last_contact);
     }
