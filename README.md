@@ -1,6 +1,6 @@
 # Personal Relationship Manager (PRM)
 
-A local-first CLI tool for tracking relationships, interactions, and reminders.
+A CLI tool for tracking relationships, interactions, and reminders.
 Privacy-first: all data stays on your machine. No external APIs.
 
 ## Setup
