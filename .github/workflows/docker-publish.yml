@@ -1,0 +1,50 @@
+name: Build and publish Docker image
+
+# Only run when something that actually affects the image changes — not on
+# every commit (e.g. editing this README wouldn't need a rebuild).
+on:
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - Cargo.toml
+      - Cargo.lock
+      - src/**
+      - .github/workflows/docker-publish.yml
+
+# GITHUB_TOKEN is a short-lived token GitHub generates automatically for
+# each workflow run, scoped only to this repo. It has no access by default;
+# this block explicitly grants it what the job needs.
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      # Same GITHUB_TOKEN from the permissions block above — no PAT needed
+      # here, unlike the manual `docker login` we did locally.
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Two tags: `latest` always points at the newest main, and the commit
+      # SHA tag gives every build a permanent, unique, traceable reference
+      # (useful once you ever need to know exactly what code a running
+      # container was built from).
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/petros-p/prm:latest
+            ghcr.io/petros-p/prm:${{ github.sha }}
