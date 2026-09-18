@@ -1,0 +1,10 @@
+# The "build context" is everything in this folder that gets sent to
+# the Docker daemon when you run `docker build .` — even files the
+# Dockerfile never COPYs still get uploaded as part of that context,
+# which slows builds down. This file excludes things that shouldn't
+# be sent at all.
+target
+.git
+.data
+.claude
+.vscode

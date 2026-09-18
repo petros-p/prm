@@ -8,6 +8,7 @@
 
 # Data
 .data
+.docker-data
 
 # Rust
 target/
