@@ -6,6 +6,7 @@ pub mod model;
 pub mod db;
 pub mod ops;
 pub mod queries;
+#[cfg(feature = "ai")]
 pub mod ai;
 pub mod migrate;
 pub mod cli;

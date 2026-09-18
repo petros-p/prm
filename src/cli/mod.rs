@@ -3,7 +3,9 @@ pub mod person_commands;
 pub mod circle_commands;
 pub mod label_commands;
 pub mod interaction_commands;
+#[cfg(feature = "ai")]
 pub mod ai_log_command;
+#[cfg(feature = "ai")]
 pub mod voice_log_command;
 
 use std::path::Path;
@@ -229,7 +231,9 @@ fn repl_loop(ctx: &CLIContext) {
             "set-reminder" => interaction_commands::set_reminder(ctx, args),
 
             // AI-assisted
+            #[cfg(feature = "ai")]
             "ai-log" => ai_log_command::ai_log(ctx, args),
+            #[cfg(feature = "ai")]
             "voice-log" => voice_log_command::voice_log(ctx, args),
 
             // Other
@@ -247,6 +251,16 @@ fn parse_command(input: &str) -> (&str, &str) {
         Some(pos) => (&input[..pos], input[pos..].trim()),
         None => (input, ""),
     }
+}
+
+#[cfg(feature = "ai")]
+fn ai_help_lines() -> &'static str {
+    "    ai-log <description>    Log via AI (natural language)\n    voice-log <wav-file>    Log via voice recording (local Whisper transcription)\n"
+}
+
+#[cfg(not(feature = "ai"))]
+fn ai_help_lines() -> &'static str {
+    ""
 }
 
 fn print_help() {
@@ -296,9 +310,7 @@ COMMANDS:
 
   Interactions:
     log <name>              Log an interaction (manual prompts)
-    ai-log <description>    Log via AI (natural language)
-    voice-log <wav-file>    Log via voice recording (local Whisper transcription)
-    remind                  Show overdue reminders
+{}    remind                  Show overdue reminders
     set-reminder <name>     Set reminder frequency
 
   Other:
@@ -308,5 +320,5 @@ COMMANDS:
 
 TIPS:
   - Names are case-insensitive and partial matches work
-  - Press 's' during add-person to save and exit early"#);
+  - Press 's' during add-person to save and exit early"#, ai_help_lines());
 }
