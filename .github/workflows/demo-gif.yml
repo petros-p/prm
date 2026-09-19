@@ -35,19 +35,18 @@ jobs:
       # this workflow did) installs just the bare `vhs` binary and skips
       # them, so a separate `run: vhs demo.tape` step silently no-ops
       # (exits 0, ~0s elapsed, no file). Let the action run the tape itself.
+      #
+      # Pinned to 0.11.0: VHS 0.12.0 has a known bug on ubuntu-24.04 runners
+      # (== ubuntu-latest) where it passes an already-cancelled context to
+      # its ffmpeg encoder, killing it before anything is written — exits 0
+      # with no output file, and no fix has shipped yet.
+      # https://github.com/charmbracelet/vhs/issues/787
       - name: Record demo.gif
         uses: charmbracelet/vhs-action@v2
         with:
           path: demo.tape
+          version: v0.11.0
 
-      - name: Verify demo.gif was created
-        run: |
-          ls -la
-          if [ ! -s demo.gif ]; then
-            echo "::error::demo.gif was not created (or is empty) by vhs"
-            exit 1
-          fi
-          echo "demo.gif size: $(stat -c%s demo.gif) bytes"
       - name: Verify demo.gif was created
         run: |
           ls -la
