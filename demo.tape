@@ -15,10 +15,18 @@ Set TypingSpeed 60ms
 Set Padding 20
 
 Hide
-Type "rm -rf .demo-data && mkdir -p .demo-data && ./target/release/prm --file .demo-data/prm.db"
+# Set up a scratch copy of the binary in its own directory so the visible
+# launch command below can just be `./prm` with no CI-specific flags/paths
+# leaking into the recording, then clear the screen so none of this setup
+# (or its echoed command lines) is visible once Show resumes.
+Type "rm -rf .demo-data && mkdir -p .demo-data && cp target/release/prm .demo-data/prm && cd .demo-data && clear"
+Enter
+Sleep 500ms
+Show
+
+Type "./prm"
 Enter
 Sleep 800ms
-Show
 
 # First launch against an empty database walks through one-time setup
 # (create the network's owner) before the REPL prompt appears.
