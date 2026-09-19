@@ -30,17 +30,24 @@ jobs:
       - name: Build release binary
         run: cargo build --release
 
-      - name: Install VHS
-        uses: charmbracelet/vhs-action@v2
-
+      # vhs-action only installs its ttyd/ffmpeg dependencies when given a
+      # tape to run via `path` — passing no path (as an earlier version of
+      # this workflow did) installs just the bare `vhs` binary and skips
+      # them, so a separate `run: vhs demo.tape` step silently no-ops
+      # (exits 0, ~0s elapsed, no file). Let the action run the tape itself.
       - name: Record demo.gif
-        run: vhs demo.tape
+        uses: charmbracelet/vhs-action@v2
+        with:
+          path: demo.tape
 
-      # VHS has been observed exiting 0 even when GIF encoding didn't
-      # actually happen (e.g. ffmpeg/chromium issues on the runner), which
-      # then shows up downstream as git-auto-commit-action silently saying
-      # "nothing to commit" with no error. Fail loudly here instead so a
-      # broken recording is visible as a red CI run, not a quiet no-op.
+      - name: Verify demo.gif was created
+        run: |
+          ls -la
+          if [ ! -s demo.gif ]; then
+            echo "::error::demo.gif was not created (or is empty) by vhs"
+            exit 1
+          fi
+          echo "demo.gif size: $(stat -c%s demo.gif) bytes"
       - name: Verify demo.gif was created
         run: |
           ls -la
