@@ -17,7 +17,9 @@ Privacy-first: all data stays on your machine. No external APIs.
    cargo run
    ```
 
-Data is stored in `.data/prm.db` (SQLite).
+Data is stored in `.data/prm.db` (SQLite). AI features (`ai-log`, `voice-log`, `inbox`)
+are included by default; build with `--no-default-features` to skip them (e.g. if you
+don't want to compile `whisper-rs`).
 
 ## Commands
 
@@ -76,6 +78,7 @@ Data is stored in `.data/prm.db` (SQLite).
 | `log <name>` | Log an interaction (manual) |
 | `ai-log <description>` | Log via AI (natural language, local Ollama) |
 | `voice-log <wav-file>` | Log via voice recording (local Whisper transcription) |
+| `inbox` | Process notes dropped in your watched inbox folder |
 | `remind` | Show overdue and upcoming reminders |
 | `set-reminder <name>` | Set reminder frequency |
 
@@ -92,6 +95,28 @@ All AI runs locally — no API keys, no data leaves your machine.
 
 - **`ai-log`** — Describe an interaction in plain text; Ollama parses it into structured data for review and save.
 - **`voice-log`** — Record a `.wav` file; Whisper transcribes it locally, then Ollama parses it.
+- **`inbox`** — Batch-process free-text notes dropped into a watched folder, through the same parse/review/save flow as `ai-log`.
+
+## Capturing notes from anywhere
+
+PRM watches a local folder — `.data/inbox` by default, or wherever `PRM_INBOX` points —
+for plain `.txt`/`.md` files. Each time you run `inbox`, every file in that folder is
+parsed by the local AI and offered up for the same review/edit/save flow as `ai-log`,
+then moved into `inbox/processed` (or `inbox/failed` if it couldn't be read).
+
+Getting a note from your phone into that folder is up to whatever sync tool you already
+use — PRM only reads a plain folder, so this works the same on any phone or computer:
+
+- **iCloud Drive / Google Drive / Dropbox / Syncthing** — point the app at `.data/inbox`
+  and share/save a note into that synced folder from your phone (e.g. the Share Sheet's
+  "Save to Files" on iOS, or "Save to Drive" on Android).
+- **AirDrop / USB / manual copy** — just drop a `.txt` file in directly.
+- **Voice memo** — transcribe it (or use `voice-log` directly if the `.wav` is already
+  on the machine running PRM) and save the transcript as a `.txt` file in the folder.
+
+There's no server, no port, and nothing that needs to run continuously — PRM only checks
+the folder when you run it, and the file transport is entirely handled by tools you
+already have.
 
 ### Voice log setup
 
@@ -108,6 +133,7 @@ curl -L -o .data/models/ggml-base.en.bin \
 | `OLLAMA_HOST` | `http://localhost:11434` | Ollama server URL |
 | `PRM_MODEL` | `llama3.2:3b` | Ollama model to use |
 | `PRM_WHISPER_MODEL` | `.data/models/ggml-base.en.bin` | Whisper model path |
+| `PRM_INBOX` | `<db_dir>/inbox` | Watched folder for the `inbox` command |
 
 ## Building
 

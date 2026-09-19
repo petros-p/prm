@@ -15,7 +15,7 @@ hound = { version = "3", optional = true }
 whisper-rs = { version = "0.11", optional = true }
 
 [features]
-default = []
+default = ["ai"]
 ai = ["dep:ureq", "dep:hound", "dep:whisper-rs"]
 
 [dev-dependencies]
