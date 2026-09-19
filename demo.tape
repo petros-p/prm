@@ -34,9 +34,24 @@ Type "Petros Papadopoulos"
 Enter
 Sleep 1800ms
 
+# Each add-person answers Nickname/Birthday/How-we-met/Location/Notes with
+# either real text or a blank Enter to skip (never 's' — that shortcut
+# reads like garbage data when it lands on a field like Birthday), then
+# uses 's' at the "Add labels?" y/n prompt to skip the remaining questions.
 Type "add-person Testy Exampleton"
 Enter
 Sleep 900ms
+Enter
+Sleep 500ms
+Enter
+Sleep 500ms
+Type "Called into a radio show"
+Enter
+Sleep 700ms
+Enter
+Sleep 500ms
+Enter
+Sleep 500ms
 Type "s"
 Enter
 Sleep 1500ms
@@ -47,6 +62,17 @@ Sleep 900ms
 Type "Billy"
 Enter
 Sleep 700ms
+Type "1955-03-14"
+Enter
+Sleep 700ms
+Type "Fixed my transmission"
+Enter
+Sleep 700ms
+Type "Boston"
+Enter
+Sleep 700ms
+Enter
+Sleep 500ms
 Type "s"
 Enter
 Sleep 1500ms
@@ -54,6 +80,17 @@ Sleep 1500ms
 Type "add-person Mike Easter"
 Enter
 Sleep 900ms
+Enter
+Sleep 500ms
+Enter
+Sleep 500ms
+Type "Introduced by Testy"
+Enter
+Sleep 700ms
+Enter
+Sleep 500ms
+Enter
+Sleep 500ms
 Type "s"
 Enter
 Sleep 1500ms
