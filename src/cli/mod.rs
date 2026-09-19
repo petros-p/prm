@@ -130,39 +130,35 @@ fn init_new_network(conn: Connection) -> Option<CLIContext> {
 fn show_startup_reminders(ctx: &CLIContext) {
     const DUE_SOON_DAYS: i64 = 7;
     let today = CLIContext::today();
+    // Already sorted most-urgent-first (never contacted, then most overdue,
+    // down through soonest-due) by reminder_queries::all_reminders, so this
+    // filter preserves that order rather than needing its own sort.
     let all = reminder_queries::all_reminders(&ctx.conn, ctx.owner_id(), today)
         .unwrap_or_default();
 
-    let overdue: Vec<_> = all.iter().filter(|s| match &s.overdue_status {
+    let due: Vec<_> = all.iter().filter(|s| match &s.overdue_status {
         reminder_queries::OverdueStatus::NeverContacted => true,
-        reminder_queries::OverdueStatus::DaysOverdue(d) => *d > 0,
+        reminder_queries::OverdueStatus::DaysOverdue(d) => *d > -DUE_SOON_DAYS,
     }).collect();
 
-    let due_soon: Vec<_> = all.iter().filter(|s| match &s.overdue_status {
-        reminder_queries::OverdueStatus::NeverContacted => false,
-        reminder_queries::OverdueStatus::DaysOverdue(d) => *d <= 0 && *d > -DUE_SOON_DAYS,
-    }).collect();
-
-    if overdue.is_empty() && due_soon.is_empty() {
+    if due.is_empty() {
         return;
     }
 
-    if !overdue.is_empty() {
-        println!("Reminders ({} overdue):", overdue.len());
-        for status in &overdue {
-            let detail = match &status.overdue_status {
-                reminder_queries::OverdueStatus::NeverContacted => "never contacted".to_string(),
-                reminder_queries::OverdueStatus::DaysOverdue(d) => format!("{} days overdue", d),
-            };
-            println!("  {} — {}", status.person.name, detail);
-        }
+    println!("Reach out to next:");
+    for status in &due {
+        let detail = match &status.overdue_status {
+            reminder_queries::OverdueStatus::NeverContacted => "never contacted".to_string(),
+            reminder_queries::OverdueStatus::DaysOverdue(d) if *d > 0 => {
+                format!("{} day{} overdue", d, if *d == 1 { "" } else { "s" })
+            }
+            reminder_queries::OverdueStatus::DaysOverdue(0) => "due today".to_string(),
+            reminder_queries::OverdueStatus::DaysOverdue(d) => {
+                format!("due in {} day{}", -d, if *d == -1 { "" } else { "s" })
+            }
+        };
+        println!("  {} — {}", status.person.name, detail);
     }
-
-    if !due_soon.is_empty() {
-        let names: Vec<&str> = due_soon.iter().map(|s| s.person.name.as_str()).collect();
-        println!("  Due soon: {}", names.join(", "));
-    }
-
     println!();
 }
 
