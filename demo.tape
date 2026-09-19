@@ -15,7 +15,7 @@ Set TypingSpeed 60ms
 Set Padding 20
 
 Hide
-Type "rm -rf .demo-data && ./target/release/prm --file .demo-data/prm.db"
+Type "rm -rf .demo-data && mkdir -p .demo-data && ./target/release/prm --file .demo-data/prm.db"
 Enter
 Sleep 800ms
 Show
