@@ -1,4 +1,4 @@
-# VHS tape script — records a short demo of the PRM REPL into demo.gif.
+# VHS tape script — records a demo of the PRM REPL into demo.gif.
 # Run locally with `vhs demo.tape` (requires the VHS CLI: https://github.com/charmbracelet/vhs).
 # Regenerated automatically by .github/workflows/demo-gif.yml on every push to
 # main that touches the CLI source, so this file should track a real,
@@ -11,7 +11,7 @@ Set FontSize 16
 Set Width 1200
 Set Height 650
 Set Theme "Dracula"
-Set TypingSpeed 60ms
+Set TypingSpeed 90ms
 Set Padding 20
 
 Hide
@@ -26,33 +26,76 @@ Show
 
 Type "./prm"
 Enter
-Sleep 800ms
+Sleep 1200ms
 
 # First launch against an empty database walks through one-time setup
-# (create the network's owner) before the REPL prompt appears.
-Type "Demo User"
-Enter
-Sleep 1000ms
-
-Type "add-person Ada Lovelace"
-Enter
-Sleep 800ms
-Type "s"
-Enter
-Sleep 1000ms
-
-Type "show-person Ada"
+# (create the network's owner).
+Type "Petros Papadopoulos"
 Enter
 Sleep 1800ms
 
-Type "find Lovelace"
+Type "add-person Testy Exampleton"
+Enter
+Sleep 900ms
+Type "s"
 Enter
 Sleep 1500ms
 
-Type "stats"
+Type "add-person Billy Bob"
+Enter
+Sleep 900ms
+Type "Billy"
+Enter
+Sleep 700ms
+Type "s"
+Enter
+Sleep 1500ms
+
+Type "add-person Mike Easter"
+Enter
+Sleep 900ms
+Type "s"
+Enter
+Sleep 1500ms
+
+Type "list"
+Enter
+Sleep 2200ms
+
+Type "show-person Billy Bob"
+Enter
+Sleep 2500ms
+
+Type "find Bob"
+Enter
+Sleep 2000ms
+
+Type "log Testy Exampleton"
+Enter
+Sleep 1200ms
+Type "1"
+Enter
+Sleep 900ms
+Type "The Garage"
+Enter
+Sleep 900ms
+Type "Brake pads, road trip stories"
+Enter
+Sleep 900ms
 Enter
 Sleep 1800ms
 
+Type "set-reminder Billy Bob"
+Enter
+Sleep 900ms
+Type "30"
+Enter
+Sleep 1800ms
+
+Type "stats"
+Enter
+Sleep 2500ms
+
 Type "quit"
 Enter
-Sleep 600ms
+Sleep 1200ms
