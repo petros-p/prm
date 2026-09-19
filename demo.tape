@@ -20,6 +20,12 @@ Enter
 Sleep 800ms
 Show
 
+# First launch against an empty database walks through one-time setup
+# (create the network's owner) before the REPL prompt appears.
+Type "Demo User"
+Enter
+Sleep 1000ms
+
 Type "add-person Ada Lovelace"
 Enter
 Sleep 800ms
