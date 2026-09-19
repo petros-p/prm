@@ -17,13 +17,16 @@ WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 
 # Now copy the actual source and compile.
-# No --features flag here, so this uses `default = []` from
-# Cargo.toml: ureq/hound/whisper-rs (the ai-log/voice-log deps) are
-# not compiled in. That matters because whisper-rs compiles C++ code
-# via a build script — pulling it in here would mean this image also
-# needs cmake/a C++ compiler, just to run `add-person`/`log`/`stats`.
+# Cargo.toml's `default` feature set includes `ai` (so a plain `cargo
+# run` on a dev machine gets ai-log/voice-log/inbox), but this image
+# explicitly opts back out with --no-default-features: whisper-rs
+# compiles C++ code via a build script, which needs cmake/a C++
+# compiler that this slim builder deliberately doesn't have, just to
+# run `add-person`/`log`/`stats`. The ai-gated commands also depend on
+# a locally-running Ollama and, for voice-log, a microphone — neither
+# of which make sense inside a container anyway.
 COPY src ./src
-RUN cargo build --release
+RUN cargo build --release --no-default-features
 
 # ---- Stage 2: runtime ----
 # A fresh, minimal image with no Rust toolchain, no build cache, no
