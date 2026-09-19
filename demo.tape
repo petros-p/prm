@@ -137,9 +137,19 @@ Type "quit"
 Enter
 Sleep 800ms
 
+# A note dropped into the watched inbox folder (synced over from a phone,
+# or any other tool the user already has) waits here for the next launch —
+# simulates capturing a note without opening PRM at all.
+Hide
+Type "mkdir -p .data/inbox && echo 'Ran into Mike at the farmers market, he asked about the transmission fix.' > .data/inbox/note.txt"
+Enter
+Sleep 300ms
+Show
+
 # Relaunching shows who to reach out to next, sorted most-urgent-first,
 # right before the REPL prompt — Billy Bob has a reminder set but no
-# logged interaction yet, so he surfaces immediately as "never contacted".
+# logged interaction yet, so he surfaces immediately as "never contacted" —
+# plus the waiting inbox note captured above.
 Type "./prm"
 Enter
 Sleep 2800ms
