@@ -1,6 +1,7 @@
 use chrono::Local;
 use rusqlite::Connection;
 use std::io::{self, Write};
+use std::path::PathBuf;
 
 use crate::db::contact_repo;
 use crate::model::*;
@@ -10,11 +11,12 @@ pub struct CLIContext {
     pub conn: Connection,
     pub user: User,
     pub self_id: Id<Person>,
+    pub inbox_dir: PathBuf,
 }
 
 impl CLIContext {
-    pub fn new(conn: Connection, user: User, self_id: Id<Person>) -> Self {
-        Self { conn, user, self_id }
+    pub fn new(conn: Connection, user: User, self_id: Id<Person>, inbox_dir: PathBuf) -> Self {
+        Self { conn, user, self_id, inbox_dir }
     }
 
     pub fn owner_id(&self) -> Id<User> {
