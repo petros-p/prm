@@ -135,4 +135,15 @@ Sleep 2500ms
 
 Type "quit"
 Enter
+Sleep 800ms
+
+# Relaunching shows who to reach out to next, sorted most-urgent-first,
+# right before the REPL prompt — Billy Bob has a reminder set but no
+# logged interaction yet, so he surfaces immediately as "never contacted".
+Type "./prm"
+Enter
+Sleep 2800ms
+
+Type "quit"
+Enter
 Sleep 1200ms
