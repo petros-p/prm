@@ -3,7 +3,13 @@
 A CLI tool for tracking relationships, interactions, and reminders.
 Privacy-first: all data stays on your machine. No external APIs.
 
-## Setup
+## Try it (no install required)
+
+Grab the prebuilt binary for your OS from the [latest release](https://github.com/petros-p/prm/releases/latest),
+unzip it, and follow the "READ ME FIRST" file inside — no Rust, no Ollama, no build step.
+This build skips the AI features (see below) so there's nothing else to set up.
+
+## Setup (build from source)
 
 1. Install [Rust](https://rustup.rs/) (stable, 1.93+)
 2. Install [Ollama](https://ollama.com/) for AI features, then pull the default model:
@@ -19,7 +25,7 @@ Privacy-first: all data stays on your machine. No external APIs.
 
 Data is stored in `.data/prm.db` (SQLite). AI features (`ai-log`, `voice-log`, `inbox`)
 are included by default; build with `--no-default-features` to skip them (e.g. if you
-don't want to compile `whisper-rs`).
+don't want to compile `whisper-rs`, or Ollama isn't available).
 
 ## Commands
 

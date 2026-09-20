@@ -1,0 +1,96 @@
+name: Release binaries
+
+# Builds a no-setup-required binary for each OS whenever a version tag is
+# pushed (e.g. `git tag v0.1.0 && git push origin v0.1.0`), and attaches
+# them to a new GitHub Release. Built with --no-default-features, same as
+# the Dockerfile: skips whisper-rs (painful to cross-compile) and means
+# the person you hand this to doesn't need a local Ollama server running
+# just to try add-person/log/stats/remind.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build --release --no-default-features
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist | Out-Null
+          Copy-Item target\release\prm.exe dist\prm.exe
+          Copy-Item packaging\windows-readme.txt "dist\READ ME FIRST.txt"
+          Compress-Archive -Path dist\* -DestinationPath prm-windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prm-windows-x64
+          path: prm-windows-x64.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build --release --no-default-features
+      - name: Package
+        run: |
+          mkdir dist
+          cp target/release/prm dist/prm
+          cp packaging/linux-readme.txt "dist/READ ME FIRST.txt"
+          chmod +x dist/prm
+          tar -czf prm-linux-x64.tar.gz -C dist .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prm-linux-x64
+          path: prm-linux-x64.tar.gz
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin,aarch64-apple-darwin
+      - name: Build both architectures
+        run: |
+          cargo build --release --no-default-features --target x86_64-apple-darwin
+          cargo build --release --no-default-features --target aarch64-apple-darwin
+      - name: Combine into a universal binary
+        run: |
+          mkdir dist
+          lipo -create -output dist/prm \
+            target/x86_64-apple-darwin/release/prm \
+            target/aarch64-apple-darwin/release/prm
+      - name: Package
+        run: |
+          cp packaging/macos-launch.command "dist/Run PRM.command"
+          cp packaging/macos-readme.txt "dist/READ ME FIRST.txt"
+          chmod +x dist/prm "dist/Run PRM.command"
+          tar -czf prm-macos-universal.tar.gz -C dist .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prm-macos-universal
+          path: prm-macos-universal.tar.gz
+
+  release:
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Flatten artifact folders into one
+        run: |
+          mkdir out
+          find artifacts -type f -exec mv {} out/ \;
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: out/*
+          generate_release_notes: true
